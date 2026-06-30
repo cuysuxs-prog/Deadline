@@ -1,0 +1,2413 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function(){
+      var w=window.screen.width;
+      var scale = w<=375 ? 0.72 : w<=430 ? 0.78 : w<=767 ? 0.82 : 1.0;
+      if(scale<1){
+        document.querySelector('meta[name="viewport"]').content=
+          'width=device-width,initial-scale='+scale+',minimum-scale=0.3,maximum-scale=5,user-scalable=yes';
+      }
+    })();
+  </script>
+  <title>Deadline Hunter – Task Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2d4689',
+            'primary-dim': '#b8c4ff',
+            'primary-container': '#dde1ff',
+            surface: '#f9f9ff',
+            'surface-card': '#ffffff',
+            'surface-low': '#f0f3ff',
+            'surface-container': '#e7eefe',
+            'on-surface': '#151c27',
+            'on-variant': '#444653',
+            border: '#c4c5d5',
+            error: '#ba1a1a',
+            'error-container': '#ffdad6',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Variables ── */
+    :root {
+      --glass:        rgba(255,255,255,0.28);
+      --glass-strong: rgba(255,255,255,0.48);
+      --glass-border: rgba(255,255,255,0.60);
+      --blur:         blur(32px);
+      --blur-sm:      blur(16px);
+      --shadow-b:     rgba(45,70,137,0.07);
+      --shadow-bm:    rgba(45,70,137,0.12);
+    }
+
+    /* ── Background ── */
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background:
+        linear-gradient(150deg, #dbeafe 0%, #eff6ff 30%, #f0f7ff 60%, #e8f0fe 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      color: #151c27;
+    }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-size: 22px; line-height: 1; vertical-align: middle; }
+    .page { display: none; }
+    .page.active { display: block; animation: pageReveal 0.22s ease; }
+    @keyframes pageReveal { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Blobs ── */
+    .bg-blob { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; z-index:0; animation:blobDrift 16s ease-in-out infinite; }
+    @keyframes blobDrift { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(22px,-28px) scale(1.05)} 70%{transform:translate(-16px,14px) scale(0.96)} }
+    .ml-\[280px\] { position:relative; z-index:1; }
+
+    /* ── Sidebar ── */
+    aside.fixed {
+      background: var(--glass) !important;
+      backdrop-filter: var(--blur) saturate(180%);
+      -webkit-backdrop-filter: var(--blur) saturate(180%);
+      border-right: 1px solid var(--glass-border) !important;
+      box-shadow: 2px 0 32px var(--shadow-b) !important;
+    }
+
+    /* ── Navbar ── */
+    header.sticky {
+      background: var(--glass) !important;
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border-bottom: 1px solid var(--glass-border) !important;
+      box-shadow: 0 2px 20px var(--shadow-b) !important;
+    }
+
+    /* ── Nav buttons ── */
+    .nav-btn {
+      transition: all 0.18s ease;
+      border-left: 3px solid transparent;
+      border-radius: 10px !important;
+    }
+    .nav-btn.active {
+      background: rgba(45,70,137,0.11) !important;
+      color: #2d4689 !important;
+      font-weight: 700;
+      border-left-color: #2d4689 !important;
+    }
+    .nav-btn:not(.active) { color: #5a6a8a; }
+    .nav-btn:not(.active):hover { background: rgba(255,255,255,0.55) !important; color: #2d4689; }
+
+    /* ── Glass Cards ── */
+    .bg-white {
+      background: var(--glass) !important;
+      backdrop-filter: var(--blur) saturate(160%);
+      -webkit-backdrop-filter: var(--blur) saturate(160%);
+      border: 1px solid var(--glass-border) !important;
+      box-shadow:
+        0 4px 32px var(--shadow-b),
+        inset 0 1px 0 rgba(255,255,255,0.90),
+        inset 0 -1px 0 rgba(255,255,255,0.20) !important;
+    }
+    section.bg-white, div.bg-white { border-radius: 16px !important; }
+
+    /* ── Surfaces ── */
+    .bg-\[#f9f9ff\] { background: rgba(240,246,255,0.50) !important; }
+    .bg-\[#f0f3ff\] { background: rgba(220,235,255,0.55) !important; }
+    .bg-\[#dde1ff\] { background: rgba(200,220,255,0.45) !important; }
+    .bg-\[#e7eefe\] { background: rgba(215,230,255,0.50) !important; }
+    .bg-\[#eef0ff\] { background: rgba(228,236,255,0.50) !important; }
+    .bg-gray-50     { background: rgba(240,246,255,0.45) !important; }
+    .bg-gray-50\/50 { background: rgba(240,246,255,0.30) !important; }
+
+    /* ── Modals ── */
+    #task-modal > div > div,
+    #event-modal > div > div,
+    #member-modal > div > div,
+    #class-modal > div > div {
+      background: var(--glass-strong) !important;
+      backdrop-filter: var(--blur) saturate(200%);
+      -webkit-backdrop-filter: var(--blur) saturate(200%);
+      border: 1px solid var(--glass-border) !important;
+      box-shadow: 0 20px 60px rgba(45,70,137,0.16) !important;
+      border-radius: 20px !important;
+    }
+    .modal-bg { animation: modalIn 0.20s ease; }
+    @keyframes modalIn { from { opacity:0; transform:scale(0.97) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+    /* ── Primary buttons ── */
+    button[class*="bg-[#2d4689]"] {
+      background: linear-gradient(135deg, #4a6cd8, #2d4689) !important;
+      border: 1px solid rgba(255,255,255,0.25) !important;
+      box-shadow: 0 3px 14px rgba(45,70,137,0.30), inset 0 1px 0 rgba(255,255,255,0.20) !important;
+      transition: all 0.18s ease !important;
+    }
+    button[class*="bg-[#2d4689]"]:hover {
+      background: linear-gradient(135deg, #5578e0, #3451a0) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(45,70,137,0.38) !important;
+    }
+    button[class*="bg-[#2d4689]"]:active { transform: translateY(0) !important; }
+
+    /* Violet */
+    button[class*="bg-[#7c3aed]"] {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+      border: 1px solid rgba(255,255,255,0.20) !important;
+      box-shadow: 0 3px 14px rgba(124,58,237,0.28) !important;
+      transition: all 0.18s ease !important;
+    }
+    button[class*="bg-[#7c3aed]"]:hover { transform: translateY(-1px); }
+
+    /* Outline */
+    button[class*="border"][class*="c4c5d5"] {
+      background: var(--glass) !important;
+      backdrop-filter: var(--blur-sm);
+      border-color: var(--glass-border) !important;
+      box-shadow: 0 2px 10px var(--shadow-b), inset 0 1px 0 rgba(255,255,255,0.72) !important;
+      transition: all 0.18s ease !important;
+    }
+    button[class*="border"][class*="c4c5d5"]:hover {
+      background: rgba(255,255,255,0.85) !important;
+      transform: translateY(-1px);
+    }
+
+    /* Text-link buttons (text-[#2d4689] without bg) */
+    button[class*="text-[#2d4689]"]:not([class*="bg-"]) {
+      color: #1e3a8a !important;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(255,255,255,0.70);
+      transition: opacity 0.15s ease !important;
+    }
+    button[class*="text-[#2d4689]"]:not([class*="bg-"]):hover { opacity: 0.72; }
+
+    /* Icon buttons */
+    button.p-1\.5, button.p-2 { transition: all 0.15s ease !important; }
+    button.p-1\.5:hover, button.p-2:hover { transform: scale(1.08); }
+
+    /* ── Inputs ── */
+    input[type="text"], input[type="email"], input[type="date"],
+    input[type="time"], input[type="number"], textarea, select {
+      background: rgba(255,255,255,0.32) !important;
+      backdrop-filter: var(--blur-sm);
+      border: 1px solid rgba(255,255,255,0.55) !important;
+      border-radius: 10px !important;
+      transition: all 0.18s ease !important;
+    }
+    input[type="text"]:focus, input[type="email"]:focus, input[type="date"]:focus,
+    input[type="time"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+      background: rgba(255,255,255,0.88) !important;
+      border-color: rgba(45,70,137,0.40) !important;
+      box-shadow: 0 0 0 3px rgba(45,70,137,0.10) !important;
+      outline: none !important;
+    }
+    input[class*="transparent"] {
+      background: transparent !important;
+      backdrop-filter: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+    input[type="range"] { background: rgba(200,220,255,0.40) !important; border: none !important; border-radius: 99px !important; box-shadow: none !important; }
+
+    /* ── Borders ── */
+    .border-\[#c4c5d5\] { border-color: rgba(200,220,255,0.45) !important; }
+    .border-\[#e2e8f8\] { border-color: rgba(210,228,255,0.40) !important; }
+    .divide-y > * + * { border-top: 1px solid rgba(200,220,255,0.28) !important; }
+
+    /* ── Table ── */
+    thead tr th { background: rgba(220,235,255,0.58) !important; backdrop-filter: var(--blur-sm); }
+
+    /* ── Hover ── */
+    .hover\:bg-\[#f0f3ff\]:hover { background: rgba(220,235,255,0.52) !important; }
+    .hover\:bg-\[#f9f9ff\]:hover { background: rgba(240,246,255,0.48) !important; }
+    .hover\:bg-\[#dde1ff\]:hover { background: rgba(200,220,255,0.50) !important; }
+    .hover\:bg-white:hover       { background: rgba(255,255,255,0.72) !important; backdrop-filter: var(--blur-sm); }
+    .hover\:bg-blue-50:hover     { background: rgba(219,234,254,0.65) !important; }
+    .hover\:bg-green-50:hover    { background: rgba(220,252,231,0.65) !important; }
+    .hover\:bg-red-50:hover      { background: rgba(254,226,226,0.65) !important; }
+    .hover\:bg-yellow-50:hover   { background: rgba(254,249,195,0.65) !important; }
+    .hover\:bg-gray-50:hover     { background: rgba(240,246,255,0.55) !important; }
+    .hover\:bg-\[#1e3270\]:hover { background: #1e3270 !important; }
+    .hover\:bg-\[#6d28d9\]:hover { background: #6d28d9 !important; }
+
+    /* ── Badges ── */
+    .bg-red-100    { background: rgba(254,226,226,0.78) !important; }
+    .bg-yellow-100 { background: rgba(254,249,195,0.74) !important; }
+    .bg-green-100  { background: rgba(220,252,231,0.78) !important; }
+    .bg-blue-100   { background: rgba(219,234,254,0.78) !important; }
+    .bg-gray-100   { background: rgba(240,246,255,0.72) !important; }
+    .bg-violet-100 { background: rgba(237,233,254,0.78) !important; }
+    .bg-orange-100 { background: rgba(255,237,213,0.74) !important; }
+    .bg-indigo-100 { background: rgba(224,231,255,0.78) !important; }
+    .bg-pink-100   { background: rgba(252,231,243,0.74) !important; }
+    .bg-red-50     { background: rgba(254,242,242,0.65) !important; }
+    .bg-yellow-50  { background: rgba(254,252,232,0.65) !important; }
+    .bg-green-50   { background: rgba(240,253,244,0.65) !important; }
+    .bg-blue-50    { background: rgba(239,246,255,0.65) !important; }
+    .bg-orange-50  { background: rgba(255,247,237,0.65) !important; }
+    .bg-violet-50  { background: rgba(245,243,255,0.65) !important; }
+    .bg-red-50.border-l-4, .bg-orange-50.border-l-4, .bg-yellow-50.border-l-4 { backdrop-filter: var(--blur-sm); }
+
+    /* ── Calendar ── */
+    .cal-cell {
+      min-height: 88px;
+      border-right: 1px solid rgba(200,220,255,0.26) !important;
+      border-bottom: 1px solid rgba(200,220,255,0.26) !important;
+      transition: background 0.15s ease;
+    }
+    .cal-cell:nth-child(7n) { border-right: none !important; }
+    .cal-cell:hover { background: rgba(255,255,255,0.35) !important; }
+
+    /* ── Chart ── */
+    .chart-bar { transition: height 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+    circle[stroke="#e7eefe"] { stroke: rgba(200,220,255,0.50) !important; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(220,235,255,0.30); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(45,70,137,0.24); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(45,70,137,0.44); }
+
+    /* ── Toast ── */
+    #toast {
+      background: var(--glass-strong) !important;
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border) !important;
+      box-shadow: 0 8px 32px rgba(45,70,137,0.16) !important;
+      color: #1a2540;
+      border-radius: 14px !important;
+    }
+
+    /* ── EV color buttons ── */
+    .ev-color-btn { transition: transform 0.13s ease; }
+    .ev-color-btn:hover { transform: scale(1.1); }
+
+    /* ── Sidebar avatar ── */
+    #sb-avatar { background: rgba(200,220,255,0.55) !important; border: 2px solid rgba(255,255,255,0.70); }
+
+    /* ── Compact Layout ── */
+    /* Page padding */
+    .page { padding: 1.25rem 1.5rem !important; }
+    /* Card internal padding */
+    .p-8 { padding: 1.25rem !important; }
+    .p-6 { padding: 1rem   !important; }
+    .p-5 { padding: 0.875rem !important; }
+    /* Section gaps */
+    .gap-6 { gap: 0.875rem !important; }
+    .gap-5 { gap: 0.75rem  !important; }
+    /* Section margins */
+    .mb-8 { margin-bottom: 1.25rem !important; }
+    .mb-6 { margin-bottom: 1rem    !important; }
+    .mb-4 { margin-bottom: 0.625rem !important; }
+    .mt-3 { margin-top:    0.5rem   !important; }
+    /* Summary card number */
+    .text-3xl { font-size: 1.5rem !important; }
+    /* Card header title row */
+    .text-2xl { font-size: 1.125rem !important; }
+    /* Table cells */
+    table thead th, table tbody td { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+    .py-3 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+    .py-4 { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; }
+    .px-5 { padding-left: 0.875rem !important; padding-right: 0.875rem !important; }
+    /* Icon size in summary cards */
+    .opacity-30[style*="font-size:32px"] { font-size: 26px !important; }
+    /* Card border radius tighter */
+    section.bg-white, div.bg-white { border-radius: 14px !important; }
+    /* Calendar cell height */
+    .cal-cell { min-height: 70px !important; }
+    /* Chart area */
+    .chart-bar { border-radius: 4px 4px 0 0; }
+    /* Sidebar nav items */
+    aside .py-3 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+
+    /* ── Mobile responsive ── */
+    @media (max-width: 767px) {
+      /* Sidebar: hidden drawer */
+      aside.fixed {
+        transform: translateX(-100%);
+        transition: transform 0.26s cubic-bezier(0.4,0,0.2,1);
+        z-index: 60 !important;
+        width: 260px !important;
+      }
+      aside.fixed.open { transform: translateX(0); }
+      /* Overlay */
+      #sidebar-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.32); z-index: 59; cursor: pointer;
+      }
+      #sidebar-overlay.open { display: block; }
+      /* Content full width */
+      .ml-\[280px\] { margin-left: 0 !important; }
+      /* Hamburger visible */
+      #menu-btn { display: flex !important; }
+      /* Header */
+      header.sticky { padding-left: 0.875rem !important; padding-right: 0.875rem !important; gap: 0.5rem !important; }
+      #global-search-wrap { flex: 1 !important; min-width: 0; }
+      /* New task: icon only */
+      #new-task-btn .btn-label { display: none !important; }
+      #new-task-btn { padding-left: 0.6rem !important; padding-right: 0.6rem !important; gap: 0 !important; }
+      /* Page padding */
+      .page { padding: 1rem !important; }
+      /* Grid: 12-col children go full width */
+      .grid-cols-12 > * { grid-column: span 12 / span 12 !important; }
+      /* Summary cards: keep 2-col */
+      .grid-cols-2 > *, .grid.grid-cols-2 > * { grid-column: span 1 / span 1 !important; }
+      /* Modals: bottom sheet */
+      #task-modal > div, #event-modal > div,
+      #member-modal > div, #class-modal > div {
+        align-items: flex-end !important; padding: 0 !important;
+      }
+      #task-modal > div > div, #event-modal > div > div,
+      #member-modal > div > div, #class-modal > div > div {
+        width: 100% !important; max-width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        max-height: 90dvh; overflow-y: auto;
+      }
+      /* Table: scroll */
+      .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+      /* ── Compact sizing (viewport scale จัดการหลัก, CSS ช่วยเสริม) ── */
+      .p-6 { padding: 1rem !important; }
+      .p-8 { padding: 1rem !important; }
+      .gap-6, .gap-5 { gap: 0.75rem !important; }
+      .mb-8 { margin-bottom: 1.25rem !important; }
+      thead tr th, tbody tr td { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+      section.bg-white, div.bg-white { border-radius: 10px !important; }
+    }
+
+    /* ── Dark mode ── */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --glass:        rgba(10,18,45,0.38);
+        --glass-strong: rgba(8,15,38,0.60);
+        --glass-border: rgba(255,255,255,0.12);
+        --shadow-b:     rgba(0,0,0,0.28);
+        --shadow-bm:    rgba(0,0,0,0.42);
+      }
+      body {
+        background: linear-gradient(150deg, #060c1a 0%, #0a1628 35%, #0d1f3a 65%, #080f20 100%) !important;
+        color: #e2e8f8 !important;
+      }
+      .text-\[#151c27\] { color: #e2e8f8 !important; }
+      .text-\[#444653\] { color: #8a9ac0 !important; }
+      .text-\[#2d4689\] { color: #7c9ff5 !important; }
+      .nav-btn.active { background: rgba(100,140,255,0.16) !important; color: #93b4ff !important; border-left-color: #7c9ff5 !important; }
+      .nav-btn:not(.active) { color: #7a8fb8; }
+      #task-modal > div > div, #event-modal > div > div, #member-modal > div > div, #class-modal > div > div {
+        background: rgba(8,16,40,0.92) !important;
+      }
+      input[type="text"], input[type="email"], input[type="date"], input[type="time"], input[type="number"], textarea, select {
+        background: rgba(15,25,55,0.62) !important; color: #e2e8f8 !important; border-color: rgba(80,120,200,0.28) !important;
+      }
+      input:focus, textarea:focus, select:focus { border-color: rgba(100,150,255,0.50) !important; }
+      input::placeholder, textarea::placeholder { color: #5a6a8a !important; }
+      .cal-cell { border-right-color: rgba(50,80,160,0.20) !important; border-bottom-color: rgba(50,80,160,0.20) !important; }
+      .cal-cell:hover { background: rgba(255,255,255,0.04) !important; }
+      thead tr th { background: rgba(15,28,60,0.65) !important; }
+      .divide-y > * + * { border-top-color: rgba(50,80,160,0.18) !important; }
+      .bg-\[#f0f3ff\] { background: rgba(15,28,60,0.55) !important; }
+      #toast { background: rgba(8,18,42,0.92) !important; color: #e2e8f8; border-color: rgba(80,120,200,0.25) !important; }
+      #sb-avatar { background: rgba(30,50,110,0.60) !important; border-color: rgba(100,150,255,0.35); }
+    }
+  </style>
+</head>
+<body class="text-[#151c27]">
+
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════════════ BACKGROUND BLOBS ═══════════════════ -->
+<div aria-hidden="true" class="bg-blob" style="width:640px;height:640px;background:radial-gradient(circle,#bfdbfe,#93c5fd);top:-200px;left:-80px;opacity:0.32;"></div>
+<div aria-hidden="true" class="bg-blob" style="width:520px;height:520px;background:radial-gradient(circle,#dbeafe,#bfdbfe);bottom:-140px;right:-60px;opacity:0.24;animation-delay:-6s;"></div>
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<aside class="fixed left-0 top-0 h-full w-[280px] bg-white flex flex-col py-6 z-50">
+  <div class="px-6 mb-8">
+    <h1 class="text-[26px] font-bold leading-tight text-[#2d4689]">Deadline Hunter</h1>
+    <p class="text-sm text-[#444653]">Task Management</p>
+  </div>
+
+  <nav class="flex-1 px-3 space-y-0.5">
+    <button onclick="nav('dashboard')"    data-nav="dashboard"     class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">dashboard</span><span>Dashboard</span>
+    </button>
+    <button onclick="nav('class-schedule')" data-nav="class-schedule" class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">school</span><span>Class Schedule</span>
+    </button>
+    <button onclick="nav('all-tasks')"   data-nav="all-tasks"     class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">assignment</span><span>All Tasks</span>
+    </button>
+    <button onclick="nav('near-deadline')" data-nav="near-deadline" class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">priority_high</span><span>Near Deadline</span>
+    </button>
+    <button onclick="nav('calendar')"    data-nav="calendar"      class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">calendar_month</span><span>Calendar</span>
+    </button>
+    <button onclick="nav('team')"        data-nav="team"          class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">groups</span><span>Team</span>
+    </button>
+    <button onclick="nav('reports')"     data-nav="reports"       class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">bar_chart</span><span>Reports</span>
+    </button>
+    <button onclick="nav('settings')"    data-nav="settings"      class="nav-btn w-full flex items-center gap-3 py-3 px-4 rounded-r-lg text-left text-sm pl-5">
+      <span class="material-symbols-outlined">settings</span><span>Settings</span>
+    </button>
+  </nav>
+
+  <div class="px-4 mt-auto">
+    <button onclick="nav('settings')" class="w-full flex items-center gap-3 p-3 bg-[#e7eefe] rounded-xl hover:bg-[#dde1ff] transition-colors text-left group">
+      <div id="sb-avatar" class="w-10 h-10 rounded-full bg-[#dde1ff] flex items-center justify-center text-[#2d4689] shrink-0 overflow-hidden">
+        <span class="material-symbols-outlined">person</span>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p id="sb-name" class="text-sm font-semibold truncate">—</p>
+        <p id="sb-role" class="text-xs text-[#444653] truncate">Project Manager</p>
+      </div>
+      <span class="material-symbols-outlined text-[#444653] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style="font-size:16px">settings</span>
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════════ CONTENT WRAPPER ═══════════════════ -->
+<div class="ml-[280px] min-h-screen flex flex-col">
+
+  <!-- TOP BAR -->
+  <header class="sticky top-0 z-40 flex items-center justify-between px-8 h-16 gap-4">
+    <button id="menu-btn" onclick="toggleSidebar()" class="hidden shrink-0 p-2 rounded-lg hover:bg-[#f4f6fb] text-[#444653] transition-colors" style="display:none">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    <div id="global-search-wrap" class="flex items-center gap-2 bg-white rounded-2xl border border-[#c4c5d5] px-3 py-2 w-72 focus-within:ring-2 focus-within:ring-[#2d4689] transition-shadow" style="border-radius:18px!important">
+      <span class="material-symbols-outlined text-[#444653]" style="font-size:18px">search</span>
+      <input id="global-search" type="text" placeholder="Search tasks..." class="flex-1 bg-transparent outline-none text-sm" oninput="globalSearch(this.value)">
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <button onclick="nav('near-deadline')" class="relative p-2 rounded-full hover:bg-white text-[#444653] transition-colors" title="Near Deadline Alerts">
+        <span class="material-symbols-outlined">notifications</span>
+        <span id="notif-dot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+      </button>
+      <button id="new-task-btn" onclick="openTaskModal()" class="flex items-center gap-2 bg-[#2d4689] text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-[#1e3270] transition-colors">
+        <span class="material-symbols-outlined" style="font-size:18px">add</span><span class="btn-label">New Task</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── PAGE: DASHBOARD ─── -->
+  <main id="page-dashboard" class="page active p-8">
+    <div class="flex justify-between items-end mb-8">
+      <div>
+        <h2 class="text-3xl font-bold">Overview</h2>
+        <p class="text-[#444653] mt-1">Welcome back, <span id="dash-name">Project Manager</span>!</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="exportCSV()" class="flex items-center gap-2 bg-white border border-[#c4c5d5] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#f0f3ff] transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px">share</span>Export Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-[#2d4689]">
+        <p class="text-xs font-semibold text-[#444653] uppercase tracking-wider">Total Tasks</p>
+        <div class="flex justify-between items-end mt-3">
+          <h3 id="c-total" class="text-3xl font-bold">0</h3>
+          <span id="c-total-b" class="bg-[#dde1ff] text-[#2d4689] text-xs px-2 py-1 rounded-full font-medium">—</span>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-400">
+        <p class="text-xs font-semibold text-[#444653] uppercase tracking-wider">In Progress</p>
+        <div class="flex justify-between items-end mt-3">
+          <h3 id="c-prog" class="text-3xl font-bold">0</h3>
+          <span id="c-prog-b" class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">—</span>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+        <p class="text-xs font-semibold text-[#444653] uppercase tracking-wider">Completed</p>
+        <div class="flex justify-between items-end mt-3">
+          <h3 id="c-done" class="text-3xl font-bold">0</h3>
+          <span id="c-done-b" class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">—</span>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+        <p class="text-xs font-semibold text-[#444653] uppercase tracking-wider">Near Deadline</p>
+        <div class="flex justify-between items-end mt-3">
+          <h3 id="c-near" class="text-3xl font-bold text-red-600">0</h3>
+          <span id="c-near-b" class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-medium">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-12 gap-6">
+
+      <!-- Weekly Chart -->
+      <section class="col-span-12 lg:col-span-8 bg-white p-8 rounded-xl shadow-sm">
+        <div class="flex justify-between items-center mb-8">
+          <div>
+            <h4 class="text-lg font-bold">Weekly Progress</h4>
+            <p class="text-sm text-[#444653]">Tasks completed per day this week</p>
+          </div>
+          <select id="week-sel" onchange="renderWeeklyChart()" class="bg-[#f0f3ff] border border-[#c4c5d5] rounded-lg text-sm px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#2d4689]">
+            <option value="this">This Week</option>
+            <option value="last">Last Week</option>
+          </select>
+        </div>
+        <div id="weekly-chart" class="flex items-end justify-between gap-3 px-2" style="height:180px"></div>
+      </section>
+
+      <!-- Urgent Tasks -->
+      <section class="col-span-12 lg:col-span-4 bg-white p-6 rounded-xl shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+          <h4 class="text-lg font-bold">Urgent Tasks</h4>
+          <button onclick="nav('near-deadline')" class="text-xs text-[#2d4689] hover:underline font-semibold">View all</button>
+        </div>
+        <div id="urgent-list" class="space-y-3"></div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="col-span-12 lg:col-span-8 bg-white p-8 rounded-xl shadow-sm">
+        <h4 class="text-lg font-bold mb-6">Recent Activity</h4>
+        <div id="activity-list" class="space-y-4"></div>
+        <button onclick="nav('all-tasks')" class="mt-6 text-[#2d4689] text-sm font-semibold hover:underline flex items-center gap-1">
+          See All Tasks <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+        </button>
+      </section>
+
+      <!-- Team Productivity -->
+      <section class="col-span-12 lg:col-span-4 bg-white p-8 rounded-xl shadow-sm">
+        <h4 class="text-lg font-bold mb-6">Team Productivity</h4>
+        <div class="flex flex-col items-center">
+          <div class="relative w-36 h-36">
+            <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#e7eefe" stroke-width="12"/>
+              <circle id="prod-ring" cx="50" cy="50" r="40" fill="none" stroke="#2d4689" stroke-width="12"
+                stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251" style="transition:stroke-dashoffset 0.8s ease"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span id="prod-pct" class="text-2xl font-bold">0%</span>
+              <span class="text-xs text-[#444653]">On-time</span>
+            </div>
+          </div>
+          <div class="mt-6 w-full space-y-3">
+            <div>
+              <div class="flex justify-between text-sm mb-1"><span class="text-[#444653]">Completion Rate</span><span id="comp-rate" class="font-semibold">0%</span></div>
+              <div class="w-full h-2 bg-[#e7eefe] rounded-full overflow-hidden"><div id="comp-bar" class="h-full bg-[#2d4689] rounded-full" style="width:0%;transition:width 0.7s ease"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1"><span class="text-[#444653]">Avg Progress</span><span id="avg-prog" class="font-semibold">0%</span></div>
+              <div class="w-full h-2 bg-[#e7eefe] rounded-full overflow-hidden"><div id="avg-bar" class="h-full bg-blue-400 rounded-full" style="width:0%;transition:width 0.7s ease"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Today's Schedule Widget -->
+      <section class="col-span-12 bg-white p-6 rounded-xl shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h4 class="text-lg font-bold">ตารางเรียนวันนี้</h4>
+            <p class="text-sm text-[#444653]">คาบเรียนในวันนี้</p>
+          </div>
+          <button onclick="nav('class-schedule')" class="text-xs text-[#2d4689] hover:underline font-semibold flex items-center gap-1">
+            ดูตารางเรียน <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
+          </button>
+        </div>
+        <div id="dash-schedule-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ─── PAGE: ALL TASKS ─── -->
+  <main id="page-all-tasks" class="page p-8">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h2 class="text-2xl font-bold">All Tasks</h2>
+        <p class="text-sm text-[#444653]">Manage all tasks in the system</p>
+      </div>
+      <button onclick="openTaskModal()" class="flex items-center gap-2 bg-[#2d4689] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1e3270] shadow-md transition-colors">
+        <span class="material-symbols-outlined" style="font-size:18px">add</span>Add New Task
+      </button>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 mb-5">
+      <div class="flex items-center gap-2 bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-[#2d4689]">
+        <span class="material-symbols-outlined text-[#444653]" style="font-size:17px">search</span>
+        <input id="task-search" type="text" placeholder="Search tasks..." class="bg-transparent outline-none w-44" oninput="renderTaskTable()">
+      </div>
+      <select id="f-status" onchange="renderTaskTable()" class="bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        <option value="">All Status</option>
+        <option value="todo">To Do</option>
+        <option value="in-progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="overdue">Overdue</option>
+      </select>
+      <select id="f-priority" onchange="renderTaskTable()" class="bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        <option value="">All Priority</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <span id="task-count" class="text-sm text-[#444653] ml-1">0 tasks</span>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-[#c4c5d5] overflow-hidden">
+      <table class="w-full text-left">
+        <thead class="bg-[#f0f3ff] border-b border-[#c4c5d5]">
+          <tr>
+            <th class="py-3 px-5 text-xs font-semibold text-[#444653] uppercase tracking-wide">Task</th>
+            <th class="py-3 px-5 text-xs font-semibold text-[#444653] uppercase tracking-wide">Assignee</th>
+            <th class="py-3 px-5 text-xs font-semibold text-[#444653] uppercase tracking-wide">Due Date</th>
+            <th class="py-3 px-5 text-xs font-semibold text-[#444653] uppercase tracking-wide">Priority</th>
+            <th class="py-3 px-5 text-xs font-semibold text-[#444653] uppercase tracking-wide">Progress</th>
+            <th class="py-3 px-5 text-xs font-semibold text-[#444653] uppercase tracking-wide">Status</th>
+            <th class="py-3 px-5 text-xs font-semibold text-[#444653] uppercase tracking-wide text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="task-tbody" class="divide-y divide-[#f0f3ff]"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- ─── PAGE: NEAR DEADLINE ─── -->
+  <main id="page-near-deadline" class="page p-8">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold">Near Deadline</h2>
+      <p class="text-sm text-[#444653]">Tasks due within the next 3 days (including overdue)</p>
+    </div>
+    <div id="near-list" class="space-y-4"></div>
+  </main>
+
+  <!-- ─── PAGE: CLASS SCHEDULE ─── -->
+  <main id="page-class-schedule" class="page p-8">
+    <!-- Header -->
+    <div class="flex justify-between items-start mb-6">
+      <div>
+        <h2 class="text-2xl font-bold">Class Schedule / ตารางเรียน</h2>
+        <p class="text-sm text-[#444653]">จัดการตารางเรียนของนักศึกษา</p>
+      </div>
+      <div class="flex gap-2 flex-wrap justify-end">
+        <button onclick="importScheduleCSV()" class="flex items-center gap-2 bg-white border border-[#c4c5d5] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#f0f3ff] transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>Import CSV
+        </button>
+        <button onclick="exportScheduleCSV()" class="flex items-center gap-2 bg-white border border-[#c4c5d5] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#f0f3ff] transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px">download</span>Export
+        </button>
+        <button onclick="openClassModal()" class="flex items-center gap-2 bg-[#2d4689] text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-[#1e3270] shadow-md transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px">add</span>เพิ่มคาบเรียน
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter/Search + View Toggle -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-2 bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-[#2d4689]">
+          <span class="material-symbols-outlined text-[#444653]" style="font-size:17px">search</span>
+          <input id="sc-search" type="text" placeholder="ค้นหา รายวิชา รหัส ห้อง อาจารย์..." class="bg-transparent outline-none w-52" oninput="renderClassSchedule()">
+        </div>
+        <select id="sc-f-day" onchange="renderClassSchedule()" class="bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+          <option value="">ทุกวัน</option>
+          <option value="mon">จันทร์</option>
+          <option value="tue">อังคาร</option>
+          <option value="wed">พุธ</option>
+          <option value="thu">พฤหัสบดี</option>
+          <option value="fri">ศุกร์</option>
+          <option value="sat">เสาร์</option>
+          <option value="sun">อาทิตย์</option>
+        </select>
+        <select id="sc-f-type" onchange="renderClassSchedule()" class="bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+          <option value="">รูปแบบทั้งหมด</option>
+          <option value="lecture">บรรยาย</option>
+          <option value="lab">ปฏิบัติ</option>
+          <option value="field">ภาคสนาม</option>
+          <option value="online">ออนไลน์</option>
+        </select>
+        <input id="sc-f-sem" type="text" placeholder="ภาคเรียน" oninput="renderClassSchedule()" class="bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689] w-24">
+        <input id="sc-f-year" type="text" placeholder="ปีการศึกษา" oninput="renderClassSchedule()" class="bg-white border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689] w-28">
+        <span id="sc-list-count" class="text-sm text-[#444653]">0 คาบ</span>
+      </div>
+      <div class="flex rounded-xl overflow-hidden border border-[#c4c5d5]">
+        <button id="sc-tab-week" onclick="setScheduleView('week')" class="px-4 py-2 text-sm font-semibold flex items-center gap-1.5 transition-colors bg-[#2d4689] text-white">
+          <span class="material-symbols-outlined" style="font-size:16px">calendar_view_week</span>Week
+        </button>
+        <button id="sc-tab-today" onclick="setScheduleView('today')" class="px-4 py-2 text-sm font-semibold flex items-center gap-1.5 transition-colors bg-white text-[#444653] border-l border-[#c4c5d5]">
+          <span class="material-symbols-outlined" style="font-size:16px">today</span>Today
+        </button>
+      </div>
+    </div>
+
+    <!-- WEEK VIEW -->
+    <div id="sc-view-week" class="hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-[#c4c5d5] p-4">
+        <div id="sc-week-grid"></div>
+      </div>
+    </div>
+
+    <!-- TODAY VIEW -->
+    <div id="sc-view-today" class="hidden">
+      <div id="sc-today-view-list" class="space-y-3"></div>
+    </div>
+  </main>
+
+  <!-- ─── PAGE: CALENDAR ─── -->
+  <main id="page-calendar" class="page p-8">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold">ปฏิทิน</h2>
+      <div class="flex items-center gap-3">
+        <button onclick="calPrev()" class="p-2 rounded-xl border border-[#c4c5d5] bg-white hover:bg-[#f0f3ff]">
+          <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
+        </button>
+        <span id="cal-label" class="text-base font-semibold min-w-[160px] text-center"></span>
+        <button onclick="calNext()" class="p-2 rounded-xl border border-[#c4c5d5] bg-white hover:bg-[#f0f3ff]">
+          <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
+        </button>
+        <button onclick="calY=new Date().getFullYear();calM=new Date().getMonth();renderCalendar()" class="text-sm font-semibold text-[#2d4689] px-3 py-1.5 border border-[#c4c5d5] rounded-xl bg-white hover:bg-[#f0f3ff]">วันนี้</button>
+        <button onclick="openEventModal(null,null)" class="flex items-center gap-2 bg-[#2d4689] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#1e3270] shadow-md transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px">event</span>เพิ่มนัดหมาย
+        </button>
+      </div>
+    </div>
+    <!-- Legend -->
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mb-3 text-xs text-[#444653]">
+      <span class="font-semibold text-[#151c27]">งาน:</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-100 border border-red-300 inline-block"></span>ด่วนมาก!</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-yellow-100 border border-yellow-300 inline-block"></span>ไม่รีบแต่ไวหน่อย</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-green-100 border border-green-300 inline-block"></span>ชิลๆ</span>
+      <span class="w-px h-4 bg-[#c4c5d5] inline-block mx-1"></span>
+      <span class="font-semibold text-[#151c27]">นัดหมาย:</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-violet-500"></span>Work</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-blue-500"></span>คณะ</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-green-500"></span>เรียน</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-orange-500"></span>แข่ง</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-red-500"></span>ด่วน</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full inline-block bg-pink-500"></span>หมอนัด</span>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-[#c4c5d5] overflow-hidden">
+      <div class="grid grid-cols-7 border-b border-[#e2e8f8]">
+        <div class="py-3 text-center text-xs font-bold text-[#444653] uppercase">อา</div>
+        <div class="py-3 text-center text-xs font-bold text-[#444653] uppercase">จ</div>
+        <div class="py-3 text-center text-xs font-bold text-[#444653] uppercase">อ</div>
+        <div class="py-3 text-center text-xs font-bold text-[#444653] uppercase">พ</div>
+        <div class="py-3 text-center text-xs font-bold text-[#444653] uppercase">พฤ</div>
+        <div class="py-3 text-center text-xs font-bold text-[#444653] uppercase">ศ</div>
+        <div class="py-3 text-center text-xs font-bold text-[#444653] uppercase">ส</div>
+      </div>
+      <div id="cal-grid" class="grid grid-cols-7"></div>
+    </div>
+  </main>
+
+  <!-- ─── PAGE: TEAM ─── -->
+  <main id="page-team" class="page p-8">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h2 class="text-2xl font-bold">Team</h2>
+        <p class="text-sm text-[#444653]">Manage your team members</p>
+      </div>
+      <button onclick="openMemberModal()" class="flex items-center gap-2 bg-[#2d4689] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1e3270] shadow-md transition-colors">
+        <span class="material-symbols-outlined" style="font-size:18px">person_add</span>Add Member
+      </button>
+    </div>
+    <div id="team-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+
+  <!-- ─── PAGE: REPORTS ─── -->
+  <main id="page-reports" class="page p-8">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold">Reports & Analytics</h2>
+      <p class="text-sm text-[#444653]">Insights on your team's performance</p>
+    </div>
+    <div class="grid grid-cols-3 gap-5 mb-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm"><p class="text-sm text-[#444653] font-medium mb-1">Total Tasks</p><p id="r-total" class="text-3xl font-bold text-[#2d4689]">0</p></div>
+      <div class="bg-white p-6 rounded-xl shadow-sm"><p class="text-sm text-[#444653] font-medium mb-1">Completion Rate</p><p id="r-rate" class="text-3xl font-bold text-green-600">0%</p></div>
+      <div class="bg-white p-6 rounded-xl shadow-sm"><p class="text-sm text-[#444653] font-medium mb-1">Overdue Tasks</p><p id="r-over" class="text-3xl font-bold text-red-600">0</p></div>
+    </div>
+    <div class="grid grid-cols-2 gap-6 mb-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm">
+        <h4 class="font-bold mb-5">Status Breakdown</h4>
+        <div id="r-status" class="space-y-4"></div>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm">
+        <h4 class="font-bold mb-5">Priority Distribution</h4>
+        <div id="r-priority" class="space-y-4"></div>
+      </div>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow-sm">
+      <h4 class="font-bold mb-5">Team Task Distribution</h4>
+      <div id="r-team" class="space-y-4"></div>
+    </div>
+  </main>
+
+  <!-- ─── PAGE: SETTINGS ─── -->
+  <main id="page-settings" class="page p-8 max-w-xl">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold">Settings</h2>
+      <p class="text-sm text-[#444653]">Manage your account and preferences</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow-sm mb-4 space-y-5">
+      <h4 class="font-bold text-base">Profile</h4>
+
+      <!-- Avatar Upload -->
+      <div class="flex items-center gap-5">
+        <div class="relative shrink-0">
+          <div id="s-avatar-preview" class="w-20 h-20 rounded-full bg-[#dde1ff] flex items-center justify-center text-[#2d4689] overflow-hidden border-2 border-[#c4c5d5]">
+            <span class="material-symbols-outlined" style="font-size:36px">person</span>
+          </div>
+          <button type="button" onclick="document.getElementById('s-avatar-input').click()"
+            class="absolute -bottom-1 -right-1 w-7 h-7 bg-[#2d4689] text-white rounded-full flex items-center justify-center shadow-md hover:bg-[#1e3270] transition-colors">
+            <span class="material-symbols-outlined" style="font-size:15px">photo_camera</span>
+          </button>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-[#151c27]">Profile Photo</p>
+          <p class="text-xs text-[#444653] mt-0.5">JPG, PNG — max 2 MB</p>
+          <div class="flex gap-2 mt-2">
+            <button type="button" onclick="document.getElementById('s-avatar-input').click()"
+              class="text-xs font-semibold text-[#2d4689] border border-[#2d4689] px-3 py-1 rounded-lg hover:bg-[#f0f3ff] transition-colors">
+              Upload Photo
+            </button>
+            <button type="button" id="s-avatar-remove" onclick="removeAvatar()" class="hidden text-xs font-semibold text-red-500 border border-red-300 px-3 py-1 rounded-lg hover:bg-red-50 transition-colors">
+              Remove
+            </button>
+          </div>
+        </div>
+        <input id="s-avatar-input" type="file" accept="image/*" class="hidden" onchange="handleAvatarUpload(this)">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">Your Name</label>
+        <input id="s-name" type="text" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">Role</label>
+        <input id="s-role" type="text" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <button onclick="saveSettings()" class="bg-[#2d4689] text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-[#1e3270]">Save Changes</button>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow-sm space-y-3">
+      <h4 class="font-bold text-base">Data</h4>
+      <div class="flex gap-3">
+        <button onclick="exportCSV()" class="border border-[#c4c5d5] text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#f0f3ff]">Export CSV</button>
+        <button onclick="exportJSON()" class="border border-[#c4c5d5] text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#f0f3ff]">Export JSON</button>
+        <button onclick="resetAll()" class="bg-red-50 border border-red-200 text-red-600 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-red-100">Reset All Data</button>
+      </div>
+    </div>
+  </main>
+
+</div><!-- end wrapper -->
+
+<!-- ═══════════════════ TASK MODAL ═══════════════════ -->
+<div id="task-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 modal-bg" onclick="if(event.target===this)closeTaskModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+    <div class="flex justify-between items-center mb-5">
+      <h3 id="task-modal-title" class="text-xl font-bold">งานใหม่</h3>
+      <button onclick="closeTaskModal()" class="p-1 rounded-full hover:bg-gray-100"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <form id="task-form" onsubmit="saveTask(event)" class="space-y-4">
+      <input type="hidden" id="t-id">
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">ชื่องาน *</label>
+        <input id="t-title" type="text" required placeholder="กรอกชื่องาน..." class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">รายละเอียด</label>
+        <textarea id="t-desc" rows="2" placeholder="รายละเอียดงาน..." class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689] resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">ผู้มอบหมาย</label>
+          <select id="t-assignee" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]" onchange="toggleOtherAssignee(this.value)">
+            <option value="">ยังไม่ได้มอบหมาย</option>
+          </select>
+          <input id="t-assignee-other" type="text" placeholder="ระบุชื่อผู้มอบหมาย..." class="hidden mt-2 w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">วันครบกำหนด *</label>
+          <input id="t-due" type="date" required class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">ความสำคัญ</label>
+          <select id="t-priority" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+            <option value="low">ต่ำ</option>
+            <option value="medium" selected>ปานกลาง</option>
+            <option value="high">สูง</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">สถานะ</label>
+          <select id="t-status" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+            <option value="todo">รอดำเนินการ</option>
+            <option value="in-progress">กำลังดำเนินการ</option>
+            <option value="completed">เสร็จสิ้น</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">ความคืบหน้า: <span id="prog-label">0%</span></label>
+        <input id="t-progress" type="range" min="0" max="100" value="0" class="w-full accent-[#2d4689]" oninput="document.getElementById('prog-label').textContent=this.value+'%'">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">ไฟล์แนบ</label>
+        <div id="attach-list" class="space-y-1 mb-2"></div>
+        <label class="flex items-center gap-2 cursor-pointer border border-dashed border-[#c4c5d5] rounded-lg px-3 py-2 text-sm text-[#444653] hover:bg-gray-50 transition-colors">
+          <span class="material-symbols-outlined text-base">attach_file</span>
+          คลิกเพื่อเลือกไฟล์
+          <input id="t-files" type="file" multiple class="hidden" onchange="handleAttachFiles(this)">
+        </label>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="flex-1 bg-[#2d4689] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1e3270]">บันทึกงาน</button>
+        <button type="button" onclick="closeTaskModal()" class="px-6 py-2.5 rounded-xl border border-[#c4c5d5] text-sm font-semibold hover:bg-gray-50">ยกเลิก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════ EVENT MODAL ═══════════════════ -->
+<div id="event-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 modal-bg" onclick="if(event.target===this)closeEventModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-5">
+      <h3 id="event-modal-title" class="text-xl font-bold">เพิ่มนัดหมาย</h3>
+      <button onclick="closeEventModal()" class="p-1 rounded-full hover:bg-gray-100"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <form id="event-form" onsubmit="saveEvent(event)" class="space-y-4">
+      <input type="hidden" id="ev-id">
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">ชื่อนัดหมาย *</label>
+        <input id="ev-title" type="text" required placeholder="กรอกชื่อนัดหมาย..." class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#7c3aed]">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">รายละเอียด</label>
+        <textarea id="ev-desc" rows="2" placeholder="รายละเอียดนัดหมาย..." class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#7c3aed] resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">วันที่ *</label>
+        <input id="ev-date" type="date" required class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#7c3aed]">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">เวลาเริ่ม</label>
+          <input id="ev-start" type="time" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#7c3aed]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">เวลาสิ้นสุด</label>
+          <input id="ev-end" type="time" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#7c3aed]">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-2">หมวดหมู่</label>
+        <div class="flex gap-3" id="ev-colors">
+          <button type="button" data-color="violet" onclick="selectEventColor('violet')" class="ev-color-btn flex flex-col items-center gap-1 group">
+            <span class="w-8 h-8 rounded-full bg-violet-500 ring-2 ring-offset-2 ring-violet-500 block"></span>
+            <span class="text-xs text-[#444653]">Work</span>
+          </button>
+          <button type="button" data-color="blue" onclick="selectEventColor('blue')" class="ev-color-btn flex flex-col items-center gap-1">
+            <span class="w-8 h-8 rounded-full bg-blue-500 block"></span>
+            <span class="text-xs text-[#444653]">คณะ</span>
+          </button>
+          <button type="button" data-color="green" onclick="selectEventColor('green')" class="ev-color-btn flex flex-col items-center gap-1">
+            <span class="w-8 h-8 rounded-full bg-green-500 block"></span>
+            <span class="text-xs text-[#444653]">เรียน</span>
+          </button>
+          <button type="button" data-color="orange" onclick="selectEventColor('orange')" class="ev-color-btn flex flex-col items-center gap-1">
+            <span class="w-8 h-8 rounded-full bg-orange-500 block"></span>
+            <span class="text-xs text-[#444653]">แข่ง</span>
+          </button>
+          <button type="button" data-color="red" onclick="selectEventColor('red')" class="ev-color-btn flex flex-col items-center gap-1">
+            <span class="w-8 h-8 rounded-full bg-red-500 block"></span>
+            <span class="text-xs text-[#444653]">ด่วน</span>
+          </button>
+          <button type="button" data-color="pink" onclick="selectEventColor('pink')" class="ev-color-btn flex flex-col items-center gap-1">
+            <span class="w-8 h-8 rounded-full bg-pink-500 block"></span>
+            <span class="text-xs text-[#444653]">หมอนัด</span>
+          </button>
+        </div>
+        <input type="hidden" id="ev-color" value="violet">
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="flex-1 bg-[#7c3aed] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#6d28d9]">บันทึกนัดหมาย</button>
+        <button type="button" id="ev-del-btn" onclick="delEvent(document.getElementById('ev-id').value);closeEventModal()" class="hidden px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50">ลบ</button>
+        <button type="button" onclick="closeEventModal()" class="px-6 py-2.5 rounded-xl border border-[#c4c5d5] text-sm font-semibold hover:bg-gray-50">ยกเลิก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════ MEMBER MODAL ═══════════════════ -->
+<div id="member-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 modal-bg" onclick="if(event.target===this)closeMemberModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-5">
+      <h3 id="member-modal-title" class="text-xl font-bold">Add Team Member</h3>
+      <button onclick="closeMemberModal()" class="p-1 rounded-full hover:bg-gray-100"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <form id="member-form" onsubmit="saveMember(event)" class="space-y-4">
+      <input type="hidden" id="m-id">
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">Name *</label>
+        <input id="m-name" type="text" required class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">Role</label>
+        <input id="m-role" type="text" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">Email</label>
+        <input id="m-email" type="email" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="flex-1 bg-[#2d4689] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1e3270]">Save</button>
+        <button type="button" onclick="closeMemberModal()" class="px-6 py-2.5 rounded-xl border border-[#c4c5d5] text-sm font-semibold hover:bg-gray-50">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════ CLASS MODAL ═══════════════════ -->
+<div id="class-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 modal-bg" onclick="if(event.target===this)closeClassModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-5">
+      <h3 id="class-modal-title" class="text-xl font-bold">เพิ่มคาบเรียน</h3>
+      <button onclick="closeClassModal()" class="p-1 rounded-full hover:bg-gray-100"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <form id="class-form" onsubmit="saveClass(event)" class="space-y-4">
+      <input type="hidden" id="cl-id">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">รหัสวิชา *</label>
+          <input id="cl-code" type="text" required placeholder="เช่น CS101" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">กลุ่มเรียน *</label>
+          <input id="cl-section" type="text" required placeholder="เช่น 1, 2A" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">ชื่อรายวิชา *</label>
+        <input id="cl-name" type="text" required placeholder="กรอกชื่อรายวิชา..." class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">วันเรียน *</label>
+          <select id="cl-day" required class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+            <option value="mon">จันทร์</option>
+            <option value="tue">อังคาร</option>
+            <option value="wed">พุธ</option>
+            <option value="thu">พฤหัสบดี</option>
+            <option value="fri">ศุกร์</option>
+            <option value="sat">เสาร์</option>
+            <option value="sun">อาทิตย์</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">เวลาเริ่ม *</label>
+          <input id="cl-start" type="time" required class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">เวลาสิ้นสุด *</label>
+          <input id="cl-end" type="time" required class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">ห้องเรียน</label>
+          <input id="cl-room" type="text" placeholder="เช่น A101, ออนไลน์" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">รูปแบบการเรียน</label>
+          <select id="cl-type" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+            <option value="lecture">บรรยาย</option>
+            <option value="lab">ปฏิบัติ</option>
+            <option value="field">ภาคสนาม</option>
+            <option value="online">ออนไลน์</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">อาจารย์ผู้สอน</label>
+        <input id="cl-teacher" type="text" placeholder="ชื่ออาจารย์..." class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">ภาคเรียน</label>
+          <input id="cl-semester" type="text" placeholder="1 หรือ 2" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">ปีการศึกษา</label>
+          <input id="cl-year" type="text" placeholder="เช่น 2568" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">จำนวนชั่วโมง</label>
+          <input id="cl-hours" type="number" min="0.5" max="10" step="0.5" value="3" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">สอบกลางภาค</label>
+          <input id="cl-midterm" type="text" placeholder="เช่น 20 ม.ค. 68, 09:00–11:00 หรือ —" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-[#444653] mb-1">สอบปลายภาค</label>
+          <input id="cl-final" type="text" placeholder="เช่น 20 มี.ค. 68, 09:00–11:00 หรือ —" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">หมายเหตุ</label>
+        <textarea id="cl-note" rows="2" placeholder="หมายเหตุเพิ่มเติม..." class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689] resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-[#444653] mb-1">สถานะ</label>
+        <select id="cl-status" class="w-full border border-[#c4c5d5] rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#2d4689]">
+          <option value="active">ปกติ</option>
+          <option value="cancelled">ยกเลิก</option>
+        </select>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="flex-1 bg-[#2d4689] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1e3270]">บันทึก</button>
+        <button type="button" id="cl-del-btn" onclick="delClass(document.getElementById('cl-id').value);closeClassModal()" class="hidden px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50">ลบ</button>
+        <button type="button" onclick="closeClassModal()" class="px-6 py-2.5 rounded-xl border border-[#c4c5d5] text-sm font-semibold hover:bg-gray-50">ยกเลิก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-6 right-6 px-5 py-3.5 rounded-2xl text-sm z-50 flex items-center gap-2" style="border-radius:18px">
+  <span class="material-symbols-outlined text-green-400" style="font-size:18px">check_circle</span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ═══════════════════ SCRIPT ═══════════════════ -->
+<script>
+// ──────────── HELPERS ────────────
+function pad(n){return String(n).padStart(2,'0');}
+function offsetDate(days){const d=new Date();d.setDate(d.getDate()+days);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function daysUntil(ds){const today=new Date();today.setHours(0,0,0,0);const due=new Date(ds+'T00:00:00');return Math.ceil((due-today)/86400000);}
+function initials(name){return (name||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();}
+function memberName(id,task){if(id==='__other__')return(task&&task.assigneeOther)||'อื่นๆ';const m=DB.team.find(t=>t.id===id);return m?m.name:'ยังไม่ได้มอบหมาย';}
+function fmtDate(ds){if(!ds)return'—';const d=new Date(ds+'T00:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function uid(){return '_'+(Date.now()+Math.random()).toString(36);}
+function timeAgo(iso){const s=(Date.now()-new Date(iso))/1000;if(s<60)return'Just now';if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;}
+function effectiveStatus(t){if(t.status==='completed')return'completed';if(daysUntil(t.dueDate)<0)return'overdue';return t.status;}
+
+function prioBadge(p){const m={high:'bg-red-100 text-red-700',medium:'bg-yellow-100 text-yellow-700',low:'bg-green-100 text-green-700'};return`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${m[p]||''}">${p.charAt(0).toUpperCase()+p.slice(1)}</span>`;}
+function statBadge(s){const m={'todo':'bg-gray-100 text-gray-600','in-progress':'bg-blue-100 text-blue-700','completed':'bg-green-100 text-green-700','overdue':'bg-red-100 text-red-700'};const l={'todo':'To Do','in-progress':'In Progress','completed':'Completed','overdue':'Overdue'};return`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${m[s]||''}">${l[s]||s}</span>`;}
+
+// ──────────── DATA ────────────
+let DB = { tasks:[], team:[], activities:[], events:[], settings:{name:'Project Manager',role:'Project Manager'} };
+
+const DB_KEY='dh-db-v2';
+
+function loadDB(){
+  const s=localStorage.getItem(DB_KEY);
+  if(s){DB=JSON.parse(s);}else{saveDB();}
+  if(!DB.team||DB.team.length===0){
+    DB.team=[
+      {id:'m_apinun', name:'Apinun',  role:'', email:''},
+      {id:'m_dome',   name:'Dome',    role:'', email:''},
+      {id:'m_prasert',name:'Prasert', role:'', email:''}
+    ];
+    saveDB();
+  }
+  if(!DB.schedule)DB.schedule=[];
+  if(!DB.events)DB.events=[];
+}
+function saveDB(){localStorage.setItem(DB_KEY,JSON.stringify(DB));}
+function logAct(text,type='update'){DB.activities.unshift({id:uid(),text,time:new Date().toISOString(),type});if(DB.activities.length>60)DB.activities=DB.activities.slice(0,60);saveDB();}
+
+// ──────────── TOAST ────────────
+function toast(msg){
+  const el=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.classList.add('hidden'),3000);
+}
+
+// ──────────── NAVIGATION ────────────
+let curPage='dashboard';
+function toggleSidebar(){
+  document.querySelector('aside.fixed').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebarMobile(){
+  if(window.innerWidth<768){
+    document.querySelector('aside.fixed').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+function nav(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.nav===page);
+  });
+  curPage=page;
+  renderPage(page);
+  closeSidebarMobile();
+}
+function renderPage(p){
+  if(p==='dashboard')renderDashboard();
+  else if(p==='all-tasks')renderTaskTable();
+  else if(p==='near-deadline')renderNearDeadline();
+  else if(p==='class-schedule')renderClassSchedule();
+  else if(p==='calendar')renderCalendar();
+  else if(p==='team')renderTeam();
+  else if(p==='reports')renderReports();
+  else if(p==='settings')renderSettings();
+}
+
+// ──────────── GLOBAL SEARCH ────────────
+function globalSearch(q){
+  if(!q.trim())return;
+  nav('all-tasks');
+  document.getElementById('task-search').value=q;
+  renderTaskTable();
+}
+
+// ──────────── DASHBOARD ────────────
+function renderDashboard(){
+  const T=DB.tasks;
+  const total=T.length;
+  const prog=T.filter(t=>t.status==='in-progress').length;
+  const done=T.filter(t=>t.status==='completed').length;
+  const near=T.filter(t=>t.status!=='completed'&&daysUntil(t.dueDate)<=3&&daysUntil(t.dueDate)>=0).length;
+  const over=T.filter(t=>t.status!=='completed'&&daysUntil(t.dueDate)<0).length;
+  const compPct=total>0?Math.round(done/total*100):0;
+
+  setText('c-total',total); setText('c-total-b',total+' tasks');
+  setText('c-prog',prog);   setText('c-prog-b',prog+' active');
+  setText('c-done',done);   setText('c-done-b',compPct+'%');
+  setText('c-near',near+over); setText('c-near-b',over+' overdue');
+
+  // Update notification dot
+  document.getElementById('notif-dot').classList.toggle('hidden',(near+over)===0);
+
+  renderWeeklyChart();
+  renderUrgentList();
+  renderActivityList();
+  renderProductivity();
+  renderDashSchedule();
+
+  const name=DB.settings.name||'Project Manager';
+  document.getElementById('dash-name').textContent=name;
+  document.getElementById('sb-name').textContent=name;
+  document.getElementById('sb-role').textContent=DB.settings.role||'Project Manager';
+}
+function setText(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+
+function renderWeeklyChart(){
+  const isLast=document.getElementById('week-sel')?.value==='last';
+  const today=new Date();today.setHours(0,0,0,0);
+  const dow=today.getDay();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const data=days.map((_,i)=>{
+    const d=new Date(today);
+    d.setDate(today.getDate()+(isLast?-dow-7:-dow)+i);
+    const ds=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const count=DB.tasks.filter(t=>t.completedAt&&t.completedAt.startsWith(ds)).length;
+    return {label:days[i],count};
+  });
+
+  const mx=Math.max(...data.map(d=>d.count),1);
+  const chart=document.getElementById('weekly-chart');
+  chart.innerHTML=data.map(({label,count})=>{
+    const pct=Math.round((count/mx)*100);
+    return `<div class="flex-1 flex flex-col items-center gap-2 group" style="height:100%">
+      <span class="text-xs font-semibold text-[#2d4689] opacity-0 group-hover:opacity-100 transition-opacity">${count||''}</span>
+      <div class="w-full bg-[#dde1ff] rounded-t-lg relative flex-1 overflow-hidden">
+        <div class="absolute bottom-0 w-full bg-[#2d4689] rounded-t-lg chart-bar" style="height:${pct}%"></div>
+      </div>
+      <span class="text-xs text-[#444653]">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderUrgentList(){
+  const urgent=DB.tasks.filter(t=>t.status!=='completed')
+    .sort((a,b)=>{const o={high:0,medium:1,low:2};return o[a.priority]-o[b.priority]||new Date(a.dueDate)-new Date(b.dueDate);})
+    .slice(0,4);
+  const el=document.getElementById('urgent-list');
+  if(!urgent.length){el.innerHTML='<div class="text-center py-6"><span class="material-symbols-outlined text-green-400" style="font-size:36px">check_circle</span><p class="text-sm text-[#444653] mt-2">No urgent tasks</p></div>';return;}
+  el.innerHTML=urgent.map(t=>{
+    const d=daysUntil(t.dueDate);
+    const dl=d<0?`${Math.abs(d)}d overdue`:d===0?'Due today':`${d}d left`;
+    const dc=d<=0?'text-red-600':d<=3?'text-yellow-600':'text-[#444653]';
+    const dot=t.priority==='high'?'bg-red-500':t.priority==='medium'?'bg-yellow-500':'bg-green-500';
+    return `<div class="flex items-start gap-3 p-3 bg-[#f9f9ff] rounded-lg cursor-pointer hover:bg-[#f0f3ff] transition-colors" onclick="openTaskModal('${t.id}')">
+      <div class="w-2 h-2 rounded-full mt-2 shrink-0 ${dot}"></div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold truncate">${t.title}</p>
+        <p class="text-xs text-[#444653]">${memberName(t.assignee,t)}</p>
+        <p class="text-xs font-semibold ${dc}">${dl}</p>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderActivityList(){
+  const el=document.getElementById('activity-list');
+  const acts=DB.activities.slice(0,6);
+  if(!acts.length){el.innerHTML='<div class="text-center py-8"><span class="material-symbols-outlined text-[#c4c5d5]" style="font-size:40px">history</span><p class="text-sm text-[#444653] mt-2">No activity yet. Start by adding tasks.</p></div>';return;}
+  const icons={complete:'check_circle',create:'add_circle',update:'edit',delete:'delete_forever'};
+  const clrs={complete:'text-green-600',create:'text-blue-600',update:'text-[#2d4689]',delete:'text-red-500'};
+  el.innerHTML=acts.map(a=>`
+    <div class="flex items-start gap-3">
+      <span class="material-symbols-outlined ${clrs[a.type]||'text-[#2d4689]'}" style="font-size:18px;margin-top:2px">${icons[a.type]||'info'}</span>
+      <div class="flex-1">
+        <p class="text-sm">${a.text}</p>
+        <p class="text-xs text-[#444653] mt-0.5">${timeAgo(a.time)}</p>
+      </div>
+    </div>`).join('');
+}
+
+function renderProductivity(){
+  const T=DB.tasks;const total=T.length;
+  const done=T.filter(t=>t.status==='completed').length;
+  const cp=total>0?Math.round(done/total*100):0;
+  const ap=total>0?Math.round(T.reduce((s,t)=>s+(t.progress||0),0)/total):0;
+  setText('prod-pct',cp+'%');setText('comp-rate',cp+'%');setText('avg-prog',ap+'%');
+  document.getElementById('comp-bar').style.width=cp+'%';
+  document.getElementById('avg-bar').style.width=ap+'%';
+  document.getElementById('prod-ring').style.strokeDashoffset=251-(cp/100)*251;
+}
+
+// ──────────── ALL TASKS ────────────
+function filteredTasks(){
+  const q=(document.getElementById('task-search')?.value||'').toLowerCase();
+  const fs=document.getElementById('f-status')?.value||'';
+  const fp=document.getElementById('f-priority')?.value||'';
+  return DB.tasks.filter(t=>{
+    const es=effectiveStatus(t);
+    if(q&&!t.title.toLowerCase().includes(q)&&!(t.desc||'').toLowerCase().includes(q))return false;
+    if(fs&&es!==fs)return false;
+    if(fp&&t.priority!==fp)return false;
+    return true;
+  });
+}
+
+function renderTaskTable(){
+  const tasks=filteredTasks();
+  const tbody=document.getElementById('task-tbody');
+  const cnt=document.getElementById('task-count');
+  if(cnt)cnt.textContent=`${tasks.length} task${tasks.length!==1?'s':''}`;
+  if(!tasks.length){
+    tbody.innerHTML=`<tr><td colspan="7" class="py-14 text-center text-sm text-[#444653]">No tasks found</td></tr>`;return;
+  }
+  tbody.innerHTML=tasks.map(t=>{
+    const es=effectiveStatus(t);
+    const d=daysUntil(t.dueDate);
+    const dc=d<0?'text-red-600 font-semibold':d<=3?'text-yellow-600 font-semibold':'';
+    const ini=initials(memberName(t.assignee,t));
+    return `<tr class="hover:bg-[#f9f9ff] transition-colors">
+      <td class="py-3 px-5">
+        <p class="text-sm font-semibold">${t.title}</p>
+        ${t.desc?`<p class="text-xs text-[#444653] truncate max-w-xs mt-0.5">${t.desc}</p>`:''}
+        ${t.attachments&&t.attachments.length?`<span class="inline-flex items-center gap-0.5 text-xs text-[#2d4689] mt-0.5"><span class="material-symbols-outlined" style="font-size:13px">attach_file</span>${t.attachments.length} ไฟล์</span>`:''}
+      </td>
+      <td class="py-3 px-5">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-[#2d4689] text-white flex items-center justify-center text-xs font-bold shrink-0">${ini}</div>
+          <span class="text-sm">${memberName(t.assignee,t)}</span>
+        </div>
+      </td>
+      <td class="py-3 px-5"><span class="text-sm ${dc}">${fmtDate(t.dueDate)}</span></td>
+      <td class="py-3 px-5">${prioBadge(t.priority)}</td>
+      <td class="py-3 px-5">
+        <div class="flex items-center gap-2">
+          <div class="w-20 h-1.5 bg-[#e7eefe] rounded-full overflow-hidden">
+            <div class="h-full bg-[#2d4689] rounded-full" style="width:${t.progress}%"></div>
+          </div>
+          <span class="text-xs text-[#444653]">${t.progress}%</span>
+        </div>
+      </td>
+      <td class="py-3 px-5">${statBadge(es)}</td>
+      <td class="py-3 px-5">
+        <div class="flex items-center justify-end gap-1">
+          ${es!=='completed'?`<button onclick="quickDone('${t.id}')" class="p-1.5 rounded-lg hover:bg-green-50 text-green-600" title="Mark Complete"><span class="material-symbols-outlined" style="font-size:16px">check</span></button>`:''}
+          <button onclick="openTaskModal('${t.id}')" class="p-1.5 rounded-lg hover:bg-blue-50 text-[#2d4689]" title="Edit"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+          <button onclick="delTask('${t.id}')" class="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="Delete"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function quickDone(id){
+  const t=DB.tasks.find(x=>x.id===id);if(!t)return;
+  t.status='completed';t.progress=100;t.completedAt=new Date().toISOString();
+  logAct(`"${t.title}" was marked as completed`,'complete');
+  saveDB();toast('Task marked as complete!');renderPage(curPage);
+}
+
+function delTask(id){
+  if(!confirm('Delete this task?'))return;
+  const t=DB.tasks.find(x=>x.id===id);
+  DB.tasks=DB.tasks.filter(x=>x.id!==id);
+  if(t)logAct(`Task "${t.title}" was deleted`,'delete');
+  saveDB();toast('Task deleted');renderPage(curPage);
+}
+
+// ──────────── TASK MODAL ────────────
+let pendingAttachments=[];
+
+function handleAttachFiles(input){
+  const files=Array.from(input.files);
+  const MAX=5*1024*1024;
+  files.forEach(f=>{
+    if(f.size>MAX){toast(`"${f.name}" ใหญ่เกินไป (สูงสุด 5 MB)`);return;}
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      pendingAttachments.push({name:f.name,size:f.size,type:f.type,data:ev.target.result});
+      renderAttachList();
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value='';
+}
+
+function renderAttachList(){
+  const el=document.getElementById('attach-list');
+  if(!pendingAttachments.length){el.innerHTML='';return;}
+  el.innerHTML=pendingAttachments.map((a,i)=>`
+    <div class="flex items-center justify-between bg-gray-50 border border-[#c4c5d5] rounded-lg px-3 py-1.5 text-sm">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="material-symbols-outlined text-base text-[#2d4689]">${a.type.startsWith('image/')?'image':'description'}</span>
+        <span class="truncate text-[#151c27]">${a.name}</span>
+        <span class="text-xs text-[#444653] shrink-0">(${(a.size/1024).toFixed(0)} KB)</span>
+      </div>
+      <button type="button" onclick="removeAttach(${i})" class="ml-2 text-red-400 hover:text-red-600 shrink-0">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </div>`).join('');
+}
+
+function removeAttach(i){
+  pendingAttachments.splice(i,1);
+  renderAttachList();
+}
+
+function openTaskModal(taskId){
+  const sel=document.getElementById('t-assignee');
+  sel.innerHTML='<option value="">ยังไม่ได้มอบหมาย</option>'+DB.team.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')+'<option value="__other__">อื่นๆ ให้ระบุ...</option>';
+
+  if(taskId){
+    const t=DB.tasks.find(x=>x.id===taskId);if(!t)return;
+    setText('task-modal-title','แก้ไขงาน');
+    document.getElementById('t-id').value=t.id;
+    document.getElementById('t-title').value=t.title;
+    document.getElementById('t-desc').value=t.desc||'';
+    sel.value=t.assignee||'';
+    const otherInp=document.getElementById('t-assignee-other');
+    if(t.assignee==='__other__'){otherInp.value=t.assigneeOther||'';otherInp.classList.remove('hidden');}else{otherInp.value='';otherInp.classList.add('hidden');}
+    document.getElementById('t-due').value=t.dueDate;
+    document.getElementById('t-priority').value=t.priority;
+    document.getElementById('t-status').value=t.status==='overdue'?'in-progress':t.status;
+    document.getElementById('t-progress').value=t.progress;
+    setText('prog-label',t.progress+'%');
+    pendingAttachments=t.attachments?[...t.attachments]:[];
+  }else{
+    setText('task-modal-title','งานใหม่');
+    document.getElementById('t-id').value='';
+    document.getElementById('task-form').reset();
+    document.getElementById('t-priority').value='medium';
+    document.getElementById('t-status').value='todo';
+    document.getElementById('t-due').value=offsetDate(7);
+    setText('prog-label','0%');
+    document.getElementById('t-assignee-other').classList.add('hidden');
+    pendingAttachments=[];
+  }
+  renderAttachList();
+  document.getElementById('task-modal').classList.remove('hidden');
+}
+function toggleOtherAssignee(val){
+  const inp=document.getElementById('t-assignee-other');
+  if(val==='__other__'){inp.classList.remove('hidden');inp.focus();}
+  else{inp.classList.add('hidden');inp.value='';}
+}
+function closeTaskModal(){
+  pendingAttachments=[];
+  renderAttachList();
+  document.getElementById('task-modal').classList.add('hidden');
+}
+
+function saveTask(e){
+  e.preventDefault();
+  const id=document.getElementById('t-id').value;
+  const data={
+    title:document.getElementById('t-title').value.trim(),
+    desc:document.getElementById('t-desc').value.trim(),
+    assignee:document.getElementById('t-assignee').value,
+    assigneeOther:document.getElementById('t-assignee').value==='__other__'?document.getElementById('t-assignee-other').value.trim():'',
+    dueDate:document.getElementById('t-due').value,
+    priority:document.getElementById('t-priority').value,
+    status:document.getElementById('t-status').value,
+    progress:parseInt(document.getElementById('t-progress').value),
+    attachments:[...pendingAttachments]
+  };
+  if(id){
+    const t=DB.tasks.find(x=>x.id===id);
+    if(t){
+      Object.assign(t,data);
+      if(data.status==='completed'&&!t.completedAt)t.completedAt=new Date().toISOString();
+      if(data.status!=='completed')t.completedAt=undefined;
+      logAct(`Task "${data.title}" was updated`,'update');
+      toast('Task updated!');
+    }
+  }else{
+    const nt={id:uid(),...data,createdAt:new Date().toISOString()};
+    if(data.status==='completed')nt.completedAt=new Date().toISOString();
+    DB.tasks.unshift(nt);
+    logAct(`New task "${data.title}" was created`,'create');
+    toast('Task created!');
+  }
+  saveDB();closeTaskModal();renderPage(curPage);
+}
+
+// ──────────── NEAR DEADLINE ────────────
+function renderNearDeadline(){
+  const tasks=DB.tasks.filter(t=>t.status!=='completed')
+    .filter(t=>{const d=daysUntil(t.dueDate);return d>=-2&&d<=3;})
+    .sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate));
+  const el=document.getElementById('near-list');
+  if(!tasks.length){
+    el.innerHTML=`<div class="bg-white rounded-xl p-14 text-center shadow-sm">
+      <span class="material-symbols-outlined text-green-500" style="font-size:48px">check_circle</span>
+      <p class="mt-3 text-lg font-bold">All clear!</p>
+      <p class="text-sm text-[#444653]">No tasks due in the next 3 days</p></div>`;return;
+  }
+  el.innerHTML=tasks.map(t=>{
+    const d=daysUntil(t.dueDate);
+    const dl=d<0?`${Math.abs(d)} day${Math.abs(d)!==1?'s':''} overdue`:d===0?'Due TODAY':`${d} day${d!==1?'s':''} left`;
+    const border=d<0?'border-red-400':d===0?'border-orange-400':'border-yellow-400';
+    const bg=d<0?'bg-red-50':d===0?'bg-orange-50':'bg-yellow-50';
+    const dc=d<0?'text-red-700':d===0?'text-orange-700':'text-yellow-700';
+    return `<div class="bg-white rounded-xl p-5 shadow-sm border-l-4 ${border} ${bg}">
+      <div class="flex items-start gap-4">
+        <div class="flex-1">
+          <div class="flex justify-between gap-4">
+            <div>
+              <h4 class="font-semibold">${t.title}</h4>
+              ${t.desc?`<p class="text-sm text-[#444653] mt-1">${t.desc}</p>`:''}
+              <div class="flex items-center gap-2 mt-2">${prioBadge(t.priority)}<span class="text-sm text-[#444653]">${memberName(t.assignee,t)}</span></div>
+            </div>
+            <div class="text-right shrink-0">
+              <p class="text-sm font-bold ${dc}">${dl}</p>
+              <p class="text-xs text-[#444653] mt-1">${fmtDate(t.dueDate)}</p>
+            </div>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <div class="flex-1 h-2 bg-white/70 rounded-full overflow-hidden border border-white/50">
+              <div class="h-full bg-[#2d4689] rounded-full" style="width:${t.progress}%"></div>
+            </div>
+            <span class="text-xs text-[#444653] w-8 text-right">${t.progress}%</span>
+          </div>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <button onclick="openTaskModal('${t.id}')" class="p-2 rounded-lg bg-white border border-[#c4c5d5] hover:bg-[#f0f3ff] text-[#2d4689]" title="Edit">
+            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+          </button>
+          <button onclick="quickDone('${t.id}')" class="p-2 rounded-lg bg-white border border-green-300 hover:bg-green-50 text-green-600" title="Mark Complete">
+            <span class="material-symbols-outlined" style="font-size:18px">check</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ──────────── CALENDAR ────────────
+let calY=new Date().getFullYear(), calM=new Date().getMonth();
+function calPrev(){calM--;if(calM<0){calM=11;calY--;}renderCalendar();}
+function calNext(){calM++;if(calM>11){calM=0;calY++;}renderCalendar();}
+
+function renderCalendar(){
+  const months=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  setText('cal-label',`${months[calM]} ${calY}`);
+  const fd=new Date(calY,calM,1).getDay();
+  const dm=new Date(calY,calM+1,0).getDate();
+  const today=new Date();
+  let cells=[];
+  for(let i=0;i<fd;i++)cells.push(null);
+  for(let d=1;d<=dm;d++)cells.push(d);
+  while(cells.length%7!==0)cells.push(null);
+  const evColors={violet:'bg-violet-100 text-violet-800',blue:'bg-blue-100 text-blue-800',green:'bg-green-100 text-green-800',orange:'bg-orange-100 text-orange-800',red:'bg-red-100 text-red-800',pink:'bg-pink-100 text-pink-800'};
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML=cells.map(day=>{
+    if(!day)return`<div class="cal-cell p-1 bg-gray-50/50"></div>`;
+    const ds=`${calY}-${pad(calM+1)}-${pad(day)}`;
+    const isToday=day===today.getDate()&&calM===today.getMonth()&&calY===today.getFullYear();
+    const dt=DB.tasks.filter(t=>t.dueDate===ds);
+    const evs=(DB.events||[]).filter(ev=>ev.date===ds).sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
+    const allItems=[
+      ...dt.slice(0,2).map(t=>`<div class="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer mb-0.5
+        ${t.priority==='high'?'bg-red-100 text-red-700':t.priority==='medium'?'bg-yellow-100 text-yellow-700':'bg-green-100 text-green-700'}"
+        onclick="event.stopPropagation();openTaskModal('${t.id}')" title="${t.title}">${t.title}</div>`),
+      ...evs.slice(0,2).map(ev=>`<div class="text-xs px-1.5 py-0.5 rounded truncate cursor-pointer mb-0.5 ${evColors[ev.color]||evColors.violet}"
+        onclick="event.stopPropagation();openEventModal('${ev.id}',null)" title="${ev.title}">
+        ${ev.startTime?`<span class="opacity-70">${ev.startTime}</span> `:''}${ev.title}</div>`)
+    ];
+    const extra=dt.length+evs.length-4;
+    return `<div class="cal-cell p-1.5 cursor-pointer ${isToday?'bg-[#eef0ff]':'hover:bg-gray-50'}" onclick="openEventModal(null,'${ds}')">
+      <div class="flex justify-end mb-1">
+        <span class="w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium
+          ${isToday?'bg-[#2d4689] text-white':'text-[#444653]'}">${day}</span>
+      </div>
+      ${allItems.join('')}
+      ${extra>0?`<div class="text-xs text-[#444653] px-1">+${extra} รายการ</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ──────────── EVENTS (APPOINTMENTS) ────────────
+function selectEventColor(c){
+  document.getElementById('ev-color').value=c;
+  const ringMap={violet:'ring-violet-500',blue:'ring-blue-500',green:'ring-green-500',orange:'ring-orange-500',red:'ring-red-500',pink:'ring-pink-500'};
+  document.querySelectorAll('.ev-color-btn').forEach(b=>{
+    const circle=b.querySelector('span:first-child');
+    const active=b.dataset.color===c;
+    Object.values(ringMap).forEach(r=>circle.classList.remove(r));
+    circle.classList.toggle('ring-2',active);
+    circle.classList.toggle('ring-offset-2',active);
+    if(active)circle.classList.add(ringMap[c]);
+  });
+}
+
+function openEventModal(eventId, dateStr){
+  const delBtn=document.getElementById('ev-del-btn');
+  if(eventId){
+    const ev=(DB.events||[]).find(x=>x.id===eventId);if(!ev)return;
+    setText('event-modal-title','แก้ไขนัดหมาย');
+    document.getElementById('ev-id').value=ev.id;
+    document.getElementById('ev-title').value=ev.title;
+    document.getElementById('ev-desc').value=ev.desc||'';
+    document.getElementById('ev-date').value=ev.date;
+    document.getElementById('ev-start').value=ev.startTime||'';
+    document.getElementById('ev-end').value=ev.endTime||'';
+    selectEventColor(ev.color||'violet');
+    delBtn.classList.remove('hidden');
+  }else{
+    setText('event-modal-title','เพิ่มนัดหมาย');
+    document.getElementById('ev-id').value='';
+    document.getElementById('event-form').reset();
+    document.getElementById('ev-date').value=dateStr||offsetDate(0);
+    selectEventColor('violet');
+    delBtn.classList.add('hidden');
+  }
+  document.getElementById('event-modal').classList.remove('hidden');
+}
+
+function closeEventModal(){document.getElementById('event-modal').classList.add('hidden');}
+
+function saveEvent(e){
+  e.preventDefault();
+  if(!DB.events)DB.events=[];
+  const id=document.getElementById('ev-id').value;
+  const data={
+    title:document.getElementById('ev-title').value.trim(),
+    desc:document.getElementById('ev-desc').value.trim(),
+    date:document.getElementById('ev-date').value,
+    startTime:document.getElementById('ev-start').value,
+    endTime:document.getElementById('ev-end').value,
+    color:document.getElementById('ev-color').value
+  };
+  if(id){
+    const ev=DB.events.find(x=>x.id===id);
+    if(ev)Object.assign(ev,data);
+    toast('อัปเดตนัดหมายแล้ว!');
+  }else{
+    DB.events.unshift({id:uid(),...data,createdAt:new Date().toISOString()});
+    logAct(`เพิ่มนัดหมาย "${data.title}"`, 'create');
+    toast('บันทึกนัดหมายแล้ว!');
+  }
+  saveDB();closeEventModal();renderCalendar();
+}
+
+function delEvent(id){
+  if(!confirm('ลบนัดหมายนี้?'))return;
+  DB.events=(DB.events||[]).filter(x=>x.id!==id);
+  saveDB();toast('ลบนัดหมายแล้ว');renderCalendar();
+}
+
+// ──────────── TEAM ────────────
+function renderTeam(){
+  const el=document.getElementById('team-grid');
+  if(!DB.team.length){el.innerHTML='<p class="text-sm text-[#444653] col-span-3 text-center py-8">No team members. Add some!</p>';return;}
+  el.innerHTML=DB.team.map(m=>{
+    const mt=DB.tasks.filter(t=>t.assignee===m.id);
+    const mc=mt.filter(t=>t.status==='completed').length;
+    const mi=mt.filter(t=>t.status==='in-progress').length;
+    const pct=mt.length>0?Math.round(mc/mt.length*100):0;
+    const ini=initials(m.name);
+    return `<div class="bg-white rounded-xl p-6 shadow-sm border border-[#f0f3ff]">
+      <div class="flex items-start justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-[#2d4689] text-white flex items-center justify-center text-lg font-bold shrink-0">${ini}</div>
+          <div>
+            <h4 class="font-semibold">${m.name}</h4>
+            <p class="text-sm text-[#444653]">${m.role||'Team Member'}</p>
+          </div>
+        </div>
+        <div class="flex gap-1">
+          <button onclick="openMemberModal('${m.id}')" class="p-1.5 rounded-lg hover:bg-blue-50 text-[#2d4689]"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+          <button onclick="delMember('${m.id}')" class="p-1.5 rounded-lg hover:bg-red-50 text-red-500"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+        </div>
+      </div>
+      ${m.email?`<p class="text-xs text-[#444653] mb-4">${m.email}</p>`:''}
+      <div class="grid grid-cols-3 gap-2 text-center mb-4">
+        <div class="bg-[#f9f9ff] rounded-lg p-2"><p class="text-lg font-bold">${mt.length}</p><p class="text-xs text-[#444653]">Total</p></div>
+        <div class="bg-[#f9f9ff] rounded-lg p-2"><p class="text-lg font-bold text-blue-600">${mi}</p><p class="text-xs text-[#444653]">Active</p></div>
+        <div class="bg-[#f9f9ff] rounded-lg p-2"><p class="text-lg font-bold text-green-600">${mc}</p><p class="text-xs text-[#444653]">Done</p></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs mb-1"><span class="text-[#444653]">Completion rate</span><span class="font-semibold">${pct}%</span></div>
+        <div class="w-full h-2 bg-[#e7eefe] rounded-full overflow-hidden">
+          <div class="h-full bg-[#2d4689] rounded-full" style="width:${pct}%"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openMemberModal(mid){
+  if(mid){
+    const m=DB.team.find(x=>x.id===mid);if(!m)return;
+    setText('member-modal-title','Edit Member');
+    document.getElementById('m-id').value=m.id;
+    document.getElementById('m-name').value=m.name;
+    document.getElementById('m-role').value=m.role||'';
+    document.getElementById('m-email').value=m.email||'';
+  }else{
+    setText('member-modal-title','Add Team Member');
+    document.getElementById('m-id').value='';
+    document.getElementById('member-form').reset();
+  }
+  document.getElementById('member-modal').classList.remove('hidden');
+}
+function closeMemberModal(){document.getElementById('member-modal').classList.add('hidden');}
+
+function saveMember(e){
+  e.preventDefault();
+  const id=document.getElementById('m-id').value;
+  const data={name:document.getElementById('m-name').value.trim(),role:document.getElementById('m-role').value.trim(),email:document.getElementById('m-email').value.trim()};
+  if(id){const m=DB.team.find(x=>x.id===id);if(m)Object.assign(m,data);toast('Member updated!');}
+  else{DB.team.push({id:uid(),...data});logAct(`${data.name} joined the team`,'create');toast('Member added!');}
+  saveDB();closeMemberModal();renderTeam();
+}
+
+function delMember(id){
+  if(!confirm('Remove this team member?'))return;
+  const m=DB.team.find(x=>x.id===id);
+  DB.team=DB.team.filter(x=>x.id!==id);
+  DB.tasks.forEach(t=>{if(t.assignee===id)t.assignee='';});
+  if(m)logAct(`${m.name} was removed from the team`,'delete');
+  saveDB();toast('Member removed');renderTeam();
+}
+
+// ──────────── REPORTS ────────────
+function renderReports(){
+  const T=DB.tasks;const total=T.length;
+  const done=T.filter(t=>t.status==='completed').length;
+  const over=T.filter(t=>isOverdue(t)).length;
+  const rate=total>0?Math.round(done/total*100):0;
+  setText('r-total',total);setText('r-rate',rate+'%');setText('r-over',over);
+
+  const bar=(label,count,color)=>{
+    const pct=total>0?Math.round(count/total*100):0;
+    return `<div>
+      <div class="flex justify-between text-sm mb-1"><span class="text-[#444653]">${label}</span><span class="font-semibold">${count} (${pct}%)</span></div>
+      <div class="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full ${color} rounded-full" style="width:${pct}%;transition:width 0.7s ease"></div></div>
+    </div>`;
+  };
+
+  document.getElementById('r-status').innerHTML=[
+    bar('Completed',done,'bg-green-500'),
+    bar('In Progress',T.filter(t=>t.status==='in-progress').length,'bg-blue-500'),
+    bar('To Do',T.filter(t=>t.status==='todo').length,'bg-gray-400'),
+    bar('Overdue',over,'bg-red-500'),
+  ].join('');
+
+  document.getElementById('r-priority').innerHTML=[
+    bar('High Priority',T.filter(t=>t.priority==='high').length,'bg-red-500'),
+    bar('Medium Priority',T.filter(t=>t.priority==='medium').length,'bg-yellow-500'),
+    bar('Low Priority',T.filter(t=>t.priority==='low').length,'bg-green-500'),
+  ].join('');
+
+  const teamEl=document.getElementById('r-team');
+  if(!DB.team.length){teamEl.innerHTML='<p class="text-sm text-[#444653]">No team members</p>';return;}
+  teamEl.innerHTML=DB.team.map(m=>{
+    const mt=T.filter(t=>t.assignee===m.id);
+    const mc=mt.filter(t=>t.status==='completed').length;
+    const pct=mt.length>0?Math.round(mc/mt.length*100):0;
+    const ini=initials(m.name);
+    return `<div class="flex items-center gap-4">
+      <div class="w-8 h-8 rounded-full bg-[#2d4689] text-white flex items-center justify-center text-xs font-bold shrink-0">${ini}</div>
+      <div class="flex-1">
+        <div class="flex justify-between text-sm mb-1"><span class="font-medium">${m.name}</span><span class="text-[#444653]">${mc}/${mt.length} · ${pct}%</span></div>
+        <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-[#2d4689] rounded-full" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function isOverdue(t){return t.status!=='completed'&&daysUntil(t.dueDate)<0;}
+
+// ──────────── SETTINGS ────────────
+function renderSettings(){
+  document.getElementById('s-name').value=DB.settings.name||'';
+  document.getElementById('s-role').value=DB.settings.role||'';
+  applyAvatarPreview(DB.settings.avatar||null);
+}
+
+function applyAvatarPreview(src){
+  const preview=document.getElementById('s-avatar-preview');
+  const removeBtn=document.getElementById('s-avatar-remove');
+  if(src){
+    preview.innerHTML=`<img src="${src}" class="w-full h-full object-cover" alt="avatar">`;
+    if(removeBtn)removeBtn.classList.remove('hidden');
+  }else{
+    preview.innerHTML=`<span class="material-symbols-outlined" style="font-size:36px">person</span>`;
+    if(removeBtn)removeBtn.classList.add('hidden');
+  }
+}
+
+function updateSidebarAvatar(){
+  const src=DB.settings.avatar||null;
+  const sb=document.getElementById('sb-avatar');
+  if(!sb)return;
+  if(src){
+    sb.innerHTML=`<img src="${src}" class="w-full h-full object-cover" alt="avatar">`;
+  }else{
+    sb.innerHTML=`<span class="material-symbols-outlined">person</span>`;
+  }
+}
+
+function handleAvatarUpload(input){
+  const file=input.files[0];
+  if(!file)return;
+  if(file.size>2*1024*1024){toast('Image too large — max 2 MB');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const src=e.target.result;
+    DB.settings.avatar=src;
+    saveDB();
+    applyAvatarPreview(src);
+    updateSidebarAvatar();
+    toast('Photo updated!');
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+function removeAvatar(){
+  DB.settings.avatar=null;
+  saveDB();
+  applyAvatarPreview(null);
+  updateSidebarAvatar();
+  toast('Photo removed');
+}
+
+function saveSettings(){
+  DB.settings.name=document.getElementById('s-name').value.trim()||'Project Manager';
+  DB.settings.role=document.getElementById('s-role').value.trim()||'Project Manager';
+  saveDB();
+  setText('sb-name',DB.settings.name);
+  setText('sb-role',DB.settings.role);
+  setText('dash-name',DB.settings.name);
+  updateSidebarAvatar();
+  toast('Settings saved!');
+}
+
+// ──────────── EXPORT ────────────
+function exportCSV(){
+  const rows=['Title,Assignee,Due Date,Priority,Status,Progress'];
+  DB.tasks.forEach(t=>rows.push(`"${t.title}","${memberName(t.assignee,t)}","${t.dueDate}","${t.priority}","${effectiveStatus(t)}","${t.progress}%"`));
+  dl(rows.join('\n'),'deadline-hunter-report.csv','text/csv');
+  toast('CSV exported!');
+}
+function exportJSON(){dl(JSON.stringify(DB,null,2),'deadline-hunter-data.json','application/json');toast('JSON exported!');}
+function dl(content,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
+function resetAll(){if(confirm('Reset ALL data? This cannot be undone.')){localStorage.removeItem(DB_KEY);location.reload();}}
+
+// ──────────── CLASS SCHEDULE ────────────
+const SC_DAYS=['sun','mon','tue','wed','thu','fri','sat'];
+const SC_DAY_TH=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const SC_WEEK_DAYS=['mon','tue','wed','thu','fri','sat','sun'];
+const SC_WEEK_LABELS=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+const SC_TYPE_LABEL={lecture:'บรรยาย',lab:'ปฏิบัติ',field:'ภาคสนาม',online:'ออนไลน์'};
+const SC_TYPE_COLOR={lecture:'bg-blue-100 text-blue-700',lab:'bg-violet-100 text-violet-700',field:'bg-green-100 text-green-700',online:'bg-orange-100 text-orange-700'};
+const SC_TYPE_BORDER={lecture:'border-blue-400',lab:'border-violet-400',field:'border-green-400',online:'border-orange-400'};
+
+function scTodayKey(){return SC_DAYS[new Date().getDay()];}
+
+let schedView='week';
+
+function filteredSchedule(){
+  const q=(document.getElementById('sc-search')?.value||'').toLowerCase();
+  const fd=document.getElementById('sc-f-day')?.value||'';
+  const fsem=document.getElementById('sc-f-sem')?.value||'';
+  const fyr=document.getElementById('sc-f-year')?.value||'';
+  const ftype=document.getElementById('sc-f-type')?.value||'';
+  return (DB.schedule||[]).filter(c=>{
+    if(q&&!c.courseCode.toLowerCase().includes(q)&&!c.courseName.toLowerCase().includes(q)
+       &&!(c.room||'').toLowerCase().includes(q)&&!(c.teacherName||'').toLowerCase().includes(q))return false;
+    if(fd&&c.dayOfWeek!==fd)return false;
+    if(fsem&&c.semester!==fsem)return false;
+    if(fyr&&c.academicYear!==fyr)return false;
+    if(ftype&&c.teachingType!==ftype)return false;
+    return true;
+  });
+}
+
+function renderClassSchedule(){
+  renderScheduleCards();
+  renderTodayClassSection();
+  renderScheduleView();
+}
+
+function renderScheduleCards(){
+  const S=DB.schedule||[];
+  const tk=scTodayKey();
+  const todayC=S.filter(c=>c.dayOfWeek===tk&&c.status==='active').length;
+  const weekC=S.filter(c=>c.status==='active').length;
+  const courses=new Set(S.filter(c=>c.status==='active').map(c=>c.courseCode)).size;
+  const hrs=S.filter(c=>c.status==='active').reduce((s,c)=>s+(parseFloat(c.hours)||0),0);
+  setText('sc-today-count',todayC);
+  setText('sc-week-count',weekC);
+  setText('sc-course-count',courses);
+  setText('sc-hours-total',hrs%1===0?hrs:hrs.toFixed(1));
+}
+
+function renderTodayClassSection(){
+  const tk=scTodayKey();
+  const classes=(DB.schedule||[]).filter(c=>c.dayOfWeek===tk&&c.status==='active')
+    .sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  const el=document.getElementById('sc-today-list');
+  if(!el)return;
+  if(!classes.length){
+    el.innerHTML=`<div class="flex items-center gap-3 text-sm text-[#444653] py-2"><span class="material-symbols-outlined text-[#c4c5d5]">event_busy</span>ไม่มีคาบเรียนวันนี้</div>`;
+    return;
+  }
+  el.innerHTML=classes.map(c=>scCardCompact(c)).join('');
+}
+
+function scCardCompact(c){
+  const now=new Date();
+  const [sh,sm]=(c.startTime||'00:00').split(':').map(Number);
+  const [eh,em]=(c.endTime||'00:00').split(':').map(Number);
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const startMin=sh*60+sm;const endMin=eh*60+em;
+  const isNow=nowMin>=startMin&&nowMin<endMin;
+  const isPast=nowMin>=endMin;
+  const isCancelled=c.status==='cancelled';
+  const typeCls=SC_TYPE_COLOR[c.teachingType]||'bg-gray-100 text-gray-600';
+  const borderCls=isCancelled?'border-gray-300':SC_TYPE_BORDER[c.teachingType]||'border-gray-300';
+  const statusBadge=isCancelled?'<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold ml-1">ยกเลิก</span>':
+    isNow?'<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold ml-1">กำลังเรียน</span>':
+    isPast?'<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold ml-1">จบแล้ว</span>':'';
+  return `<div class="flex items-center gap-3 p-3 bg-[#f9f9ff] rounded-xl border-l-4 ${borderCls} mb-2 cursor-pointer hover:bg-[#f0f3ff] transition-colors ${isCancelled?'opacity-60':''}" onclick="openClassModal('${c.id}')">
+    <div class="text-center shrink-0 w-14">
+      <p class="text-xs font-bold text-[#2d4689]">${c.startTime}</p>
+      <p class="text-xs text-[#444653]">${c.endTime}</p>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-semibold truncate">${c.courseName}${statusBadge}</p>
+      <p class="text-xs text-[#444653]">${c.courseCode} • Sec.${c.section} • ${c.room||'—'}</p>
+    </div>
+    <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${typeCls} shrink-0">${SC_TYPE_LABEL[c.teachingType]||c.teachingType}</span>
+  </div>`;
+}
+
+function scCardFull(c){
+  const now=new Date();
+  const [sh,sm]=(c.startTime||'00:00').split(':').map(Number);
+  const [eh,em]=(c.endTime||'00:00').split(':').map(Number);
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const isNow=nowMin>=(sh*60+sm)&&nowMin<(eh*60+em);
+  const isPast=nowMin>=(eh*60+em);
+  const isCancelled=c.status==='cancelled';
+  const typeCls=SC_TYPE_COLOR[c.teachingType]||'bg-gray-100 text-gray-600';
+  const borderCls=isCancelled?'border-gray-300':SC_TYPE_BORDER[c.teachingType]||'border-gray-300';
+  const statusBadge=isCancelled?'<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">ยกเลิก</span>':
+    isNow?'<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">กำลังเรียน</span>':
+    isPast?'<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">จบแล้ว</span>':'<span class="text-xs px-2 py-0.5 rounded-full bg-[#dde1ff] text-[#2d4689] font-semibold">รอเรียน</span>';
+  return `<div class="bg-white border border-[#e2e8f8] border-l-4 ${borderCls} rounded-xl p-5 cursor-pointer hover:shadow-md transition-all ${isCancelled?'opacity-60':''}">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${typeCls}">${SC_TYPE_LABEL[c.teachingType]||c.teachingType}</span>
+          ${statusBadge}
+        </div>
+        <p class="font-bold text-base">${c.courseName}</p>
+        <p class="text-sm text-[#444653] mt-0.5">${c.courseCode} • กลุ่ม ${c.section}</p>
+        <div class="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-sm text-[#444653]">
+          <span class="flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:16px">schedule</span>${c.startTime} – ${c.endTime}</span>
+          <span class="flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:16px">room</span>${c.room||'—'}</span>
+          ${c.teacherName?`<span class="flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:16px">person</span>${c.teacherName}</span>`:''}
+          ${c.hours?`<span class="flex items-center gap-1.5"><span class="material-symbols-outlined" style="font-size:16px">hourglass_empty</span>${c.hours} ชม.</span>`:''}
+        </div>
+        ${c.note?`<p class="text-xs text-[#444653] mt-2 bg-gray-50 rounded-lg px-3 py-1.5">${c.note}</p>`:''}
+      </div>
+      <div class="flex gap-1 shrink-0">
+        <button onclick="openClassModal('${c.id}')" class="p-2 rounded-lg hover:bg-blue-50 text-[#2d4689]"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+        <button onclick="delClass('${c.id}')" class="p-2 rounded-lg hover:bg-red-50 text-red-500"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderScheduleView(){
+  ['week','today'].forEach(v=>{
+    const btn=document.getElementById('sc-tab-'+v);
+    if(!btn)return;
+    btn.className=btn.className.replace(/bg-\[#2d4689\]|text-white|bg-white|text-\[#444653\]/g,'').trim();
+    if(schedView===v){btn.classList.add('bg-[#2d4689]','text-white');}
+    else{btn.classList.add('bg-white','text-[#444653]');}
+  });
+  document.getElementById('sc-view-week')?.classList.toggle('hidden',schedView!=='week');
+  document.getElementById('sc-view-today')?.classList.toggle('hidden',schedView!=='today');
+  if(schedView==='week')renderWeekView();
+  else renderTodayView();
+}
+
+function setScheduleView(v){schedView=v;renderScheduleView();}
+
+
+function renderWeekView(){
+  const el=document.getElementById('sc-week-grid');
+  if(!el)return;
+  const active=filteredSchedule().filter(c=>c.status==='active');
+
+  // ── time range ──
+  let minH=24,maxH=0;
+  active.forEach(c=>{
+    if(c.startTime){const h=parseInt(c.startTime);if(h<minH)minH=h;}
+    if(c.endTime){const [eh,em]=c.endTime.split(':').map(Number);const h=eh+(em>0?1:0);if(h>maxH)maxH=h;}
+  });
+  if(minH>maxH||minH===24){minH=8;maxH=18;}
+  minH=Math.max(6,minH); maxH=Math.min(22,maxH);
+  const hours=[];for(let h=minH;h<maxH;h++)hours.push(h);
+  const slotCount=hours.length;
+
+  // ── days to render: Mon-Fri always; Sat/Sun only if have classes ──
+  const hasDayClass=d=>active.some(c=>c.dayOfWeek===d);
+  const renderDays=[...[['mon',0],['tue',1],['wed',2],['thu',3],['fri',4]],
+    ...(['sat','sun'].filter(hasDayClass).map((d,i)=>[d,5+i]))];
+
+  const today=scTodayKey();
+
+  // ── per-course color palette (12 distinct glass tones) ──
+  const COURSE_COLORS=[
+    {bg:'rgba(199,210,254,0.84)',bl:'#6366f1',tx:'#312e81'}, // indigo
+    {bg:'rgba(196,181,253,0.84)',bl:'#8b5cf6',tx:'#4c1d95'}, // violet
+    {bg:'rgba(147,197,253,0.84)',bl:'#3b82f6',tx:'#1e3a8a'}, // blue
+    {bg:'rgba(167,243,208,0.84)',bl:'#10b981',tx:'#065f46'}, // emerald
+    {bg:'rgba(253,186,116,0.84)',bl:'#ea580c',tx:'#7c2d12'}, // orange
+    {bg:'rgba(252,165,165,0.84)',bl:'#ef4444',tx:'#7f1d1d'}, // red
+    {bg:'rgba(216,180,254,0.84)',bl:'#a855f7',tx:'#581c87'}, // purple
+    {bg:'rgba(134,239,172,0.84)',bl:'#16a34a',tx:'#14532d'}, // green
+    {bg:'rgba(253,224,71,0.84)', bl:'#ca8a04',tx:'#713f12'}, // yellow
+    {bg:'rgba(186,230,253,0.84)',bl:'#0ea5e9',tx:'#0c4a6e'}, // sky
+    {bg:'rgba(249,168,212,0.84)',bl:'#ec4899',tx:'#831843'}, // pink
+    {bg:'rgba(165,243,252,0.84)',bl:'#0891b2',tx:'#164e63'}, // cyan
+  ];
+  const uniqueCodes=[...new Set(active.map(c=>c.courseCode))].sort();
+  const courseColorMap=Object.fromEntries(
+    uniqueCodes.map((code,i)=>[code,COURSE_COLORS[i%COURSE_COLORS.length]])
+  );
+
+  const cellBorder='1px solid rgba(180,196,255,0.32)';
+  const thStyle=`border:${cellBorder};padding:6px 4px;text-align:center;font-size:10.5px;font-weight:700;`;
+  const tdStyle=`border:${cellBorder};vertical-align:top;padding:2px;`;
+
+  // ── table header ──
+  let html=`<div class="overflow-x-auto" style="margin:-1px">
+  <table style="width:100%;border-collapse:collapse;min-width:${70+slotCount*112}px;border:${cellBorder}">
+    <thead>
+      <tr>
+        <th style="${thStyle}width:72px;min-width:72px;background:rgba(45,70,137,0.20);color:#2d4689">วัน / เวลา</th>
+        ${hours.map(h=>`<th style="${thStyle}min-width:112px;background:rgba(45,70,137,0.12);color:#2d4689">${pad(h)}:00–${pad(h+1)}:00</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>`;
+
+  // ── rows ──
+  renderDays.forEach(([day,dayIdx],ri)=>{
+    const dayClasses=active.filter(c=>c.dayOfWeek===day).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+    const isToday=day===today;
+    const rowBg=isToday?'rgba(221,225,255,0.32)':(ri%2===0?'rgba(255,255,255,0.06)':'rgba(200,210,255,0.06)');
+    const dayLabel=SC_WEEK_LABELS[SC_WEEK_DAYS.indexOf(day)]||day;
+
+    html+=`<tr style="background:${rowBg}">
+      <td style="${tdStyle}padding:6px 4px;text-align:center;font-weight:700;font-size:11px;vertical-align:middle;white-space:nowrap;${isToday?'background:rgba(45,70,137,0.20);color:#2d4689':'background:rgba(220,228,255,0.22);color:#444653'}">
+        ${dayLabel}${isToday?`<br><span style="font-size:9px;font-weight:400;opacity:0.65">วันนี้</span>`:''}
+      </td>`;
+
+    // slot map: null=empty, {cls,span}=class start, 'skip'=occupied by prev span
+    const slots=new Array(slotCount).fill(null);
+    dayClasses.forEach(cls=>{
+      const [sh,sm]=(cls.startTime||'00:00').split(':').map(Number);
+      const [eh,em]=(cls.endTime  ||'00:00').split(':').map(Number);
+      const si=sh-minH;
+      const span=Math.max(1,Math.round((eh+em/60)-(sh+sm/60)));
+      if(si>=0&&si<slotCount&&!slots[si]){
+        slots[si]={cls,span:Math.min(span,slotCount-si)};
+        for(let i=1;i<span&&si+i<slotCount;i++){if(!slots[si+i])slots[si+i]='skip';}
+      }
+    });
+
+    for(let i=0;i<slotCount;i++){
+      const s=slots[i];
+      if(s==='skip')continue;
+      if(s&&s.cls){
+        const c=s.cls;
+        const p=courseColorMap[c.courseCode]||{bg:'rgba(243,244,246,0.88)',bl:'#9ca3af',tx:'#374151'};
+        const cancelled=c.status==='cancelled';
+        html+=`<td colspan="${s.span}" style="${tdStyle}cursor:pointer" onclick="openClassModal('${c.id}')">
+          <div style="background:${p.bg};border-left:3px solid ${p.bl};color:${p.tx};border-radius:6px;padding:5px 8px;min-height:72px;${cancelled?'opacity:0.45;':''}transition:opacity 0.15s ease" onmouseenter="this.style.opacity='0.70'" onmouseleave="this.style.opacity='1'">
+            <div style="font-weight:700;font-size:11.5px;text-decoration:underline;text-underline-offset:2px;letter-spacing:0.02em;margin-bottom:3px">${c.courseCode}</div>
+            <div style="font-size:10px;line-height:1.4;opacity:0.88">(${c.hours||3}) ${c.section}${c.room?', '+c.room:''}</div>
+            ${c.teacherName?`<div style="font-size:9.5px;line-height:1.4;opacity:0.70;margin-top:2px">${c.teacherName}</div>`:''}
+            ${cancelled?`<div style="font-size:9px;font-weight:700;color:#ef4444;margin-top:3px">ยกเลิก</div>`:''}
+          </div>
+        </td>`;
+      }else{
+        html+=`<td style="${tdStyle}min-height:72px;height:72px"></td>`;
+      }
+    }
+    html+=`</tr>`;
+  });
+
+  html+=`</tbody></table>
+  <p style="font-size:10px;color:#6b7280;margin-top:6px;padding:0 2px">
+    * ข้อมูลในตารางประกอบด้วย รหัสวิชา (หน่วยกิต) กลุ่ม, ห้องเรียน ตามลำดับ
+  </p>
+  </div>`;
+
+  // ── ตารางสอบ (exam schedule) ──
+  const courses=[...new Map(active.map(c=>[c.courseCode+'_'+c.section,c])).values()]
+    .sort((a,b)=>a.courseCode.localeCompare(b.courseCode));
+
+  if(courses.length){
+    const tdC=`border:${cellBorder};padding:7px 10px;font-size:11px;`;
+    html+=`<div style="margin-top:16px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;border:${cellBorder}">
+      <thead>
+        <tr>
+          <th colspan="5" style="${tdC}background:rgba(45,70,137,0.18);color:#2d4689;font-size:12px;font-weight:700;text-align:left">ตารางสอบ</th>
+        </tr>
+        <tr style="background:rgba(220,228,255,0.48)">
+          <th style="${tdC}font-weight:700;color:#374151;white-space:nowrap">รหัสวิชา</th>
+          <th style="${tdC}font-weight:700;color:#374151">ชื่อรายวิชา</th>
+          <th style="${tdC}font-weight:700;color:#374151;text-align:center">กลุ่ม</th>
+          <th style="${tdC}font-weight:700;color:#374151;text-align:center;white-space:nowrap">สอบกลางภาค</th>
+          <th style="${tdC}font-weight:700;color:#374151;text-align:center;white-space:nowrap">สอบปลายภาค</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${courses.map((c,i)=>{
+          const cp=courseColorMap[c.courseCode]||{bg:'rgba(243,244,246,0.88)',bl:'#9ca3af',tx:'#374151'};
+          const rowBg=i%2===0?'rgba(255,255,255,0.07)':'rgba(200,210,255,0.07)';
+          const mid=c.midtermExam||'—';
+          const fin=c.finalExam||'—';
+          return `<tr style="background:${rowBg}">
+            <td style="${tdC}font-weight:700">
+              <span style="display:inline-flex;align-items:center;gap:6px">
+                <span style="width:10px;height:10px;border-radius:50%;background:${cp.bl};flex-shrink:0;box-shadow:0 0 0 2px ${cp.bg}"></span>
+                <span style="color:${cp.tx}">${c.courseCode}</span>
+              </span>
+            </td>
+            <td style="${tdC}">
+              <div style="font-weight:600">${c.courseName}</div>
+              ${c.teacherName?`<div style="font-size:10px;color:#6b7280;margin-top:1px">${c.teacherName}</div>`:''}
+            </td>
+            <td style="${tdC}text-align:center">${c.section}</td>
+            <td style="${tdC}text-align:center;color:${mid==='—'?'#9ca3af':'#111827'}">${mid}</td>
+            <td style="${tdC}text-align:center;color:${fin==='—'?'#9ca3af':'#111827'}">${fin}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <p style="font-size:10px;color:#6b7280;margin-top:6px">
+      * คลิกที่คาบเรียนในตารางเพื่อแก้ไขข้อมูล รวมถึงกำหนดวันสอบกลางภาค / ปลายภาค
+    </p>
+    </div>`;
+  }
+
+  el.innerHTML=html;
+}
+
+function renderTodayView(){
+  const tk=scTodayKey();
+  const el=document.getElementById('sc-today-view-list');
+  if(!el)return;
+  const classes=filteredSchedule().filter(c=>c.dayOfWeek===tk).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  const dayTh=SC_DAY_TH[new Date().getDay()];
+  if(!classes.length){
+    el.innerHTML=`<div class="bg-white rounded-xl text-center py-16 shadow-sm">
+      <span class="material-symbols-outlined text-[#c4c5d5]" style="font-size:48px">event_busy</span>
+      <p class="mt-3 text-lg font-bold">ไม่มีคาบเรียนวัน${dayTh}</p>
+      <p class="text-sm text-[#444653]">ว่างสบาย!</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML=`<p class="text-sm font-semibold text-[#444653] mb-3">วัน${dayTh} — ${classes.length} คาบ</p>`+classes.map(c=>scCardFull(c)).join('');
+}
+
+// Modal open/close/save
+function openClassModal(classId){
+  const delBtn=document.getElementById('cl-del-btn');
+  if(classId){
+    const c=(DB.schedule||[]).find(x=>x.id===classId);if(!c)return;
+    setText('class-modal-title','แก้ไขคาบเรียน');
+    const fields=['cl-id','cl-code','cl-name','cl-section','cl-day','cl-start','cl-end','cl-room','cl-type','cl-teacher','cl-semester','cl-year','cl-hours','cl-midterm','cl-final','cl-note','cl-status'];
+    const values=[c.id,c.courseCode,c.courseName,c.section,c.dayOfWeek,c.startTime,c.endTime,c.room||'',c.teachingType,c.teacherName||'',c.semester||'',c.academicYear||'',c.hours||3,c.midtermExam||'',c.finalExam||'',c.note||'',c.status];
+    fields.forEach((id,i)=>{const el=document.getElementById(id);if(el)el.value=values[i];});
+    if(delBtn)delBtn.classList.remove('hidden');
+  }else{
+    setText('class-modal-title','เพิ่มคาบเรียน');
+    document.getElementById('cl-id').value='';
+    document.getElementById('class-form').reset();
+    document.getElementById('cl-type').value='lecture';
+    document.getElementById('cl-status').value='active';
+    document.getElementById('cl-hours').value='3';
+    const now=new Date();
+    document.getElementById('cl-year').value=String(now.getFullYear()+543);
+    document.getElementById('cl-semester').value=now.getMonth()<5?'2':'1';
+    if(delBtn)delBtn.classList.add('hidden');
+  }
+  document.getElementById('class-modal').classList.remove('hidden');
+}
+function closeClassModal(){document.getElementById('class-modal').classList.add('hidden');}
+
+function saveClass(e){
+  e.preventDefault();
+  const id=document.getElementById('cl-id').value;
+  const data={
+    courseCode:document.getElementById('cl-code').value.trim(),
+    courseName:document.getElementById('cl-name').value.trim(),
+    section:document.getElementById('cl-section').value.trim(),
+    dayOfWeek:document.getElementById('cl-day').value,
+    startTime:document.getElementById('cl-start').value,
+    endTime:document.getElementById('cl-end').value,
+    room:document.getElementById('cl-room').value.trim(),
+    teachingType:document.getElementById('cl-type').value,
+    teacherName:document.getElementById('cl-teacher').value.trim(),
+    semester:document.getElementById('cl-semester').value.trim(),
+    academicYear:document.getElementById('cl-year').value.trim(),
+    hours:parseFloat(document.getElementById('cl-hours').value)||3,
+    midtermExam:document.getElementById('cl-midterm').value.trim(),
+    finalExam:document.getElementById('cl-final').value.trim(),
+    note:document.getElementById('cl-note').value.trim(),
+    status:document.getElementById('cl-status').value
+  };
+  if(!DB.schedule)DB.schedule=[];
+  if(id){
+    const c=DB.schedule.find(x=>x.id===id);
+    if(c){Object.assign(c,data);toast('อัปเดตคาบเรียนแล้ว!');}
+  }else{
+    DB.schedule.unshift({id:uid(),...data,createdAt:new Date().toISOString()});
+    logAct(`เพิ่มคาบเรียน "${data.courseName}"`, 'create');
+    toast('เพิ่มคาบเรียนแล้ว!');
+  }
+  saveDB();closeClassModal();renderPage(curPage);
+}
+
+function delClass(id){
+  if(!confirm('ลบคาบเรียนนี้?'))return;
+  const c=(DB.schedule||[]).find(x=>x.id===id);
+  DB.schedule=(DB.schedule||[]).filter(x=>x.id!==id);
+  if(c)logAct(`ลบคาบเรียน "${c.courseName}"`, 'delete');
+  saveDB();toast('ลบคาบเรียนแล้ว');renderPage(curPage);
+}
+
+function toggleClassStatus(id){
+  const c=(DB.schedule||[]).find(x=>x.id===id);
+  if(!c)return;
+  c.status=c.status==='active'?'cancelled':'active';
+  saveDB();toast(c.status==='active'?'เปิดใช้งานแล้ว':'ยกเลิกคาบเรียนแล้ว');renderPage(curPage);
+}
+
+// Export / Import CSV
+function exportScheduleCSV(){
+  if(!(DB.schedule||[]).length){toast('ไม่มีข้อมูลให้ export');return;}
+  const hdr='รหัสวิชา,ชื่อรายวิชา,กลุ่ม,วัน,เวลาเริ่ม,เวลาสิ้นสุด,ห้องเรียน,รูปแบบ,อาจารย์,ภาคเรียน,ปีการศึกษา,ชั่วโมง,หมายเหตุ,สถานะ';
+  const rows=DB.schedule.map(c=>[c.courseCode,c.courseName,c.section,c.dayOfWeek,c.startTime,c.endTime,c.room||'',c.teachingType,c.teacherName||'',c.semester||'',c.academicYear||'',c.hours,c.note||'',c.status].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  dl([hdr,...rows].join('\n'),'class-schedule.csv','text/csv;charset=utf-8');
+  toast('Export เรียบร้อย!');
+}
+
+function importScheduleCSV(){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.csv,text/csv';
+  inp.onchange=ev=>{
+    const file=ev.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=re=>{
+      const lines=re.target.result.split('\n').filter(l=>l.trim());
+      if(lines.length<2){toast('ไฟล์ CSV ว่างเปล่า');return;}
+      const parse=line=>{const r=[];let cur='',inQ=false;for(const ch of line){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;};
+      if(!DB.schedule)DB.schedule=[];
+      let added=0;
+      lines.slice(1).forEach(line=>{
+        const [courseCode,courseName,section,dayOfWeek,startTime,endTime,room,teachingType,teacherName,semester,academicYear,hours,note,status]=parse(line);
+        if(!courseCode&&!courseName)return;
+        const validDay=['mon','tue','wed','thu','fri','sat','sun'].includes(dayOfWeek)?dayOfWeek:'mon';
+        const validType=['lecture','lab','field','online'].includes(teachingType)?teachingType:'lecture';
+        DB.schedule.unshift({id:uid(),courseCode:courseCode||'',courseName:courseName||'',section:section||'1',dayOfWeek:validDay,startTime:startTime||'09:00',endTime:endTime||'12:00',room:room||'',teachingType:validType,teacherName:teacherName||'',semester:semester||'',academicYear:academicYear||'',hours:parseFloat(hours)||3,note:note||'',status:status==='cancelled'?'cancelled':'active',createdAt:new Date().toISOString()});
+        added++;
+      });
+      saveDB();toast(`Import สำเร็จ ${added} คาบ`);renderPage(curPage);
+    };
+    reader.readAsText(file,'UTF-8');
+  };
+  inp.click();
+}
+
+// Dashboard schedule widget
+function renderDashSchedule(){
+  const tk=scTodayKey();
+  const classes=(DB.schedule||[]).filter(c=>c.dayOfWeek===tk&&c.status==='active')
+    .sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  const el=document.getElementById('dash-schedule-list');
+  if(!el)return;
+  if(!classes.length){
+    el.innerHTML=`<div class="flex items-center gap-3 text-sm text-[#444653] py-2"><span class="material-symbols-outlined text-[#c4c5d5]">event_busy</span>ไม่มีคาบเรียนวันนี้</div>`;
+    return;
+  }
+  el.innerHTML=`<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">`+classes.slice(0,6).map(c=>{
+    const typeCls=SC_TYPE_COLOR[c.teachingType]||'bg-gray-100 text-gray-600';
+    const borderCls=SC_TYPE_BORDER[c.teachingType]||'border-gray-300';
+    return `<div class="flex items-center gap-3 p-3 bg-[#f9f9ff] rounded-xl border-l-4 ${borderCls} cursor-pointer hover:bg-[#f0f3ff] transition-colors" onclick="nav('class-schedule')">
+      <div class="text-center shrink-0 w-12">
+        <p class="text-xs font-bold text-[#2d4689]">${c.startTime}</p>
+        <p class="text-xs text-[#444653]">${c.endTime}</p>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold truncate">${c.courseName}</p>
+        <p class="text-xs text-[#444653]">${c.courseCode} • ${c.room||'—'}</p>
+      </div>
+      <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${typeCls} shrink-0">${SC_TYPE_LABEL[c.teachingType]||''}</span>
+    </div>`;
+  }).join('')+`</div>`;
+  if(classes.length>6){
+    el.innerHTML+=`<button onclick="nav('class-schedule')" class="mt-3 text-[#2d4689] text-sm font-semibold hover:underline flex items-center gap-1">ดูทั้งหมด ${classes.length} คาบ <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span></button>`;
+  }
+}
+
+// ──────────── INIT ────────────
+loadDB();
+updateSidebarAvatar();
+nav('dashboard');
+</script>
+</body>
+</html>
