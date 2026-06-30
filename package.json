@@ -1,0 +1,8 @@
+{
+  "name": "stitch-downloader",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@google/stitch-sdk": "latest"
+  }
+}
